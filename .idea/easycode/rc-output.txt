@@ -1,0 +1,695 @@
+<passage file_path=/pom.xml>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.5.7</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.trading.automated.nb</groupId>
+	<artifactId>AutoTrader</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>AutoTrader</name>
+	<description>Automated Options Trading Application</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>21</java.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+</passage>
+<passage file_path=/pom.xml>
+<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.zerodhatech.kiteconnect</groupId>
+			<artifactId>kiteconnect</artifactId>
+			<version>3.1.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.telegram</groupId>
+			<artifactId>telegrambots</artifactId>
+			<version>6.8.0</version>
+		</dependency>
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/AutoTraderApplication.java>
+@SpringBootApplication
+@ComponentScan
+public class AutoTraderApplication implements CommandLineRunner {
+	private static final Logger logger = LoggerFactory.getLogger(TelegramBotStarter.class);
+
+	@Autowired
+	private TelegramBotStarter telegramBotStarter;
+
+	public static void main(String[] args) {
+		SpringApplication.run(AutoTraderApplication.class, args);
+	}
+
+	@Override
+	public void run(String... args) throws Exception{
+		logger.debug("Starting Telegram bot polling.");
+		try {
+			TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+			botsApi.registerBot(telegramBotStarter);
+		} catch (TelegramApiException e) {
+			logger.error("Failed to start Telegram Bot: " + e.getMessage());
+		}
+
+		logger.debug("Bot is running.");
+	}
+}
+
+</passage>
+<passage file_path=/pom.xml>
+<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.12</version> <!-- Use a recent version -->
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/SymbolGenerationService.java>
+        try {
+            // Assuming expiryStr is "DD MMM" (e.g., "26 OCT")
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
+            // Java's LocalDate requires the year to be present
+            String fullExpiryStr = expiryStr.trim() + " " + fullYear;
+            expiryDate = LocalDate.parse(fullExpiryStr, formatter);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid expiry format: " + expiryStr, e);
+        }
+
+        int day = expiryDate.getDayOfMonth();
+        int month = expiryDate.getMonthValue();
+
+        // --- 4. Determine Format Type (Monthly vs. Weekly) ---
+
+        // TUESDAY is the assumed expiry day for all checks (Weekday code 2 in Java's DayOfWeek: Monday=1 to Sunday=7)
+        final DayOfWeek EXPIRY_DAY_OF_WEEK = DayOfWeek.TUESDAY;
+
+        // Check if the expiry date is the LAST TUESDAY of the month
+        LocalDate lastTuesdayOfMonth = expiryDate.with(TemporalAdjusters.lastInMonth(EXPIRY_DAY_OF_WEEK));
+
+        boolean isMonthlyExpiry = expiryDate.isEqual(lastTuesdayOfMonth);
+
+</passage>
+<passage file_path=/src/test/java/com/trading/automated/nb/AutoTrader/AutoTraderApplicationTests.java>
+package com.trading.automated.nb.AutoTrader;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class AutoTraderApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/SymbolGenerationService.java>
+    }
+
+    // Helper class to return the result
+    public static class SymbolResult {
+        public final String symbol;
+        public final int quantity;
+
+        public SymbolResult(String symbol, int quantity) {
+            this.symbol = symbol;
+            this.quantity = quantity;
+        }
+    }
+}
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/SymbolGenerationService.java>
+        } else {
+            // WEEKLY EXPIRY FORMAT: INDEX_NAME + YY + M + DD + STRIKE + INSTRUMENT_TYPE
+            String monthCode = WEEKLY_MONTH_CODE_MAP.get(month);
+            if (monthCode == null) {
+                throw new IllegalArgumentException("Could not determine valid month code for month " + month);
+            }
+
+            String dayOfMonthStr = String.format("%02d", day); // DD (e.g., '20')
+
+            tradingSymbol = indexName + yearTwoDigits + monthCode + dayOfMonthStr + strike + optionType;
+            System.out.println("[WARN] Using REGULAR WEEKLY format for " + expiryStr + ".");
+        }
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/broker/factory/TradingAccountFactory.java>
+@Component
+public class TradingAccountFactory {
+
+    private final Map<String, ITradingAccount> accountMap;
+
+    // Spring injects ALL beans implementing ITradingAccount into this Map, 
+    // using the @Service name as the key (e.g., "zerodhaAccount", "fyersAccount")
+    public TradingAccountFactory(Map<String, ITradingAccount> accountMap) {
+        this.accountMap = accountMap;
+    }
+
+    public ITradingAccount getTradingAccount(BrokerType type) {
+        String key = type.name().toLowerCase() + "Account"; // Constructs "zerodhaAccount", etc.
+        
+        ITradingAccount account = accountMap.get(key);
+        
+        if (account == null) {
+            throw new IllegalArgumentException("Unsupported broker type: " + type);
+        }
+        return account;
+    }
+}
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/AutoTraderApplication.java>
+package com.trading.automated.nb.AutoTrader;
+
+import com.trading.automated.nb.AutoTrader.telegram.TelegramBotStarter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+
+@SpringBootApplication
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/telegram/TelegramBotStarter.java>
+        if (update.hasChannelPost() && targetChannelId.equals(update.getChannelPost().getChatId().toString())) {
+            try {
+                String messageText = update.getChannelPost().getText();
+                MessagePattern messagePattern = patternRecognitionService.getMessagePattern(messageText);
+
+                if(messagePattern.equals(MessagePattern.UNKNOWN_SIGNAL))
+                    return;
+
+                if(!tradingAccount.isAuthenticated()){
+                    tradingAccount.authenticate();
+                    if(!tradingAccount.isAuthenticated()){
+                        logger.error("Please login to the trading account");
+                    }
+                }
+
+                SignalParserService parser = new SignalParserService();
+
+                switch(messagePattern){
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/Patterns.java>
+            Pattern.CASE_INSENSITIVE); // Case is handled by toUpperCase() in cleanInput
+
+    // PROFIT BOOKING Pattern (Must match the clean, hyphenated output)
+    public static final String PROFIT_BOOKING_REGEX =
+            // Option 1: Partial Profit/SL Modification (using hyphens)
+            "(?:MODIFY[-]STOP[-]LOSS[-]AND[-])?BOOK[-]\\d+%[-]PROFIT|" +
+                    // Option 2: Full Profit Booking (e.g., BOOK-FULL-PROFIT)
+                    "\\b(BOOK|PROFIT)[-](FULL|PARTIAL|REMAINING|TARGET)\\b";
+
+    public static final Pattern PROFIT_BOOKING_PATTERN = Pattern.compile(PROFIT_BOOKING_REGEX,
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    // STOP LOSS TRIGGERED Pattern (Must match the clean, hyphenated output)
+    public static final String STOP_LOSS_TRIGGERED_REGEX =
+            "STOP[-]LOSS[-]TRIGGERED";
+
+    public static final Pattern STOP_LOSS_TRIGGERED_PATTERN = Pattern.compile(STOP_LOSS_TRIGGERED_REGEX,
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+}
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/telegram/TelegramBotStarter.java>
+import org.telegram.telegrambots.meta.generics.BotOptions;
+import org.telegram.telegrambots.meta.generics.LongPollingBot;
+import org.telegram.telegrambots.meta.generics.TelegramBot;
+
+@Component
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/telegram/TelegramBotStarter.java>
+package com.trading.automated.nb.AutoTrader.telegram;
+
+import com.trading.automated.nb.AutoTrader.entity.EntryEntity;
+import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
+import com.trading.automated.nb.AutoTrader.services.ITradingAccount;
+import com.trading.automated.nb.AutoTrader.services.PatternRecognitionService;
+import com.trading.automated.nb.AutoTrader.services.SignalParserService;
+import com.trading.automated.nb.AutoTrader.services.SymbolGenerationService;
+import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.bots.DefaultBotOptions;
+import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
+import org.telegram.telegrambots.meta.generics.BotOptions;
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/SignalParserService.java>
+        if (matcher.find()) {
+            try {
+                // --- Action ---
+                String action = matcher.group(1).toUpperCase();
+
+                // --- Contract & Expiry ---
+                // The expiry date (e.g., "26 OCT") is NOT captured by the current ENTRY_REGEX.
+                // We concatenate the Index, Strike, and Type to form the contract.
+                String index = matcher.group(2);
+                String strike = matcher.group(3);
+                String optionType = matcher.group(4);
+
+                // Form the Contract string (e.g., NIFTY 23500 CE)
+                String contract = String.format("%s %s %s", index, strike, optionType).toUpperCase();
+                // Expiry is left empty as it's not captured by the current regex pattern
+                String expiry = "";
+
+                // --- Prices ---
+                // G6 and G7 are the two price points (e.g., 100 and 110)
+                double priceA = Double.parseDouble(matcher.group(6));
+                double priceB = Double.parseDouble(matcher.group(7));
+
+                logger.info("Parsed Entry Signal: Action={}, Contract={}, Range={}-{}",
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/Patterns.java>
+public class Patterns {
+
+    // --- Patterns for Signal Recognition (FINAL SOLUTION) ---
+
+    // Expected Cleaned Format: BUY-21 OCT-NIFTY 25900 CE-BETWEEN 145-135
+    public static final String ENTRY_REGEX = "(?:[A-Z]+\\s*)*"                  // optional prefix words like FRESH TRADE
+            + "\"\\s*(BUY)\\s*\""                // "BUY"
+            + "\\s*(?:[-–]\\s*)?"                // optional hyphen or en-dash
+            + "(\\d+\\s*[A-Z]{2,4}\\s*\\d*)"     // date like 4 Nov or 14Oct or 4 Nov 2025
+            + "(?:\\s*[-–]\\s*)?"                // optional hyphen or en-dash before instrument
+            + "\"(.+?)\""                        // instrument
+            + "\\s*between\\s*"
+            + "(\\d+\\.?\\d*)"                   // price start
+            + "\\s*[-–]\\s*"                     // hyphen/en-dash between prices
+            + "(\\d+\\.?\\d*)";
+
+    public static final Pattern ENTRY_PATTERN = Pattern.compile(ENTRY_REGEX,
+            Pattern.CASE_INSENSITIVE); // Case is handled by toUpperCase() in cleanInput
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/PatternRecognitionService.java>
+@Service
+public class PatternRecognitionService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PatternRecognitionService.class);
+
+    public MessagePattern getMessagePattern(String cleanMessage){
+
+        if (cleanMessage.isEmpty()) {
+            return MessagePattern.UNKNOWN_SIGNAL;
+        }
+
+        // Match against the clean, uppercase, hyphenated string
+        if (STOP_LOSS_TRIGGERED_PATTERN.matcher(cleanMessage).find()) {
+            return MessagePattern.EXIT_SL_SIGNAL;
+        }
+        if (PROFIT_BOOKING_PATTERN.matcher(cleanMessage).find()) {
+            return MessagePattern.EXIT_PROFIT_SIGNAL;
+        }
+        if (ENTRY_PATTERN.matcher(cleanMessage).find()) {
+            return MessagePattern.ENTRY_SIGNAL;
+        }
+        return MessagePattern.UNKNOWN_SIGNAL;
+    }
+
+    /**
+     * Modifies the input string to standardize it for pattern matching,
+     * based on the Python cleaning rules, including the final toUpperCase().
+     */
+    public String cleanInput(String message){
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/SignalParserService.java>
+@Service // Marking as a Spring Service
+public class SignalParserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(SignalParserService.class);
+
+    /**
+     * Attempts to parse an entry signal message and extract its components into an EntryEntity.
+     * * The regex captures the following groups:
+     * G1: Action (BUY/SELL)
+     * G2: Index (e.g., NIFTY)
+     * G3: Strike (e.g., 40000)
+     * G4: Option Type (CE/PE)
+     * G6: Price A (Lower/Upper)
+     * G7: Price B (Lower/Upper)
+     * * @param message The raw signal message.
+     * @return A populated EntryEntity if a match is found, otherwise null.
+     */
+    public EntryEntity getEntryEntity(String message) {
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/PatternRecognitionService.java>
+        // Convert the final string to uppercase for reliable matching
+        return cleanMessage.toUpperCase();
+    }
+}
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/ITradingAccount.java>
+package com.trading.automated.nb.AutoTrader.services;
+
+import com.zerodhatech.models.Order;
+import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
+import java.io.IOException;
+
+public interface ITradingAccount {
+    // Authenticates and returns the authenticated instance.
+    ITradingAccount authenticate() throws IOException, KiteException;
+
+    // Returns the Zerodha login URL for the initial request token.
+    String getLoginUrl();
+
+    // Places an order and returns the Order ID.
+    String placeOrder(String tradingSymbol, int quantity, String transactionType, String orderType, double price) throws IOException, KiteException;
+
+    // Checks the status of a specific order ID.
+    String checkOrderStatus(String orderId) throws IOException, KiteException;
+
+    // Retrieves the Last Traded Price (LTP) of a symbol.
+    double getLtp(String tradingSymbol) throws IOException, KiteException;
+
+    // Checks if the session is currently authenticated.
+    boolean isAuthenticated();
+}
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/SignalParserService.java>
+    public EntryEntity getEntryEntity(String message) {
+
+        if (message == null) {
+            return null;
+        }
+
+        // 1. Attempt to match the entry pattern
+        Matcher matcher = Patterns.ENTRY_PATTERN.matcher(message);
+
+        if (matcher.find()) {
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/PatternRecognitionService.java>
+package com.trading.automated.nb.AutoTrader.services;
+
+import com.trading.automated.nb.AutoTrader.enums.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import static com.trading.automated.nb.AutoTrader.services.Patterns.*;
+
+
+@Service
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/services/Patterns.java>
+package com.trading.automated.nb.AutoTrader.services;
+
+import java.util.regex.Pattern;
+
+public class Patterns {
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/enums/MessagePattern.java>
+package com.trading.automated.nb.AutoTrader.enums;
+
+public enum MessagePattern {
+    // Signals a new trade entry (e.g., "BUY 26 OCT NIFTY 23500 CE between 100 - 110")
+    ENTRY_SIGNAL,
+
+    // Signals to exit based on stop loss (e.g., "STOP LOSS TRIGGERED")
+    EXIT_SL_SIGNAL,
+
+    // Signals to exit based on profit booking (e.g., "BOOK FULL PROFIT")
+    EXIT_PROFIT_SIGNAL,
+
+    // Any other message, or a message that doesn't match the required formats
+    UNKNOWN_SIGNAL
+}
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/enums/BrokerType.java>
+package com.trading.automated.nb.AutoTrader.enums;
+
+public enum BrokerType {
+    ZERODHA
+}
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/trade/signal/BookProfitSingal.java>
+package com.trading.automated.nb.AutoTrader.trade.signal;
+
+import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
+
+import java.util.regex.Pattern;
+
+public class BookProfitSingal{
+
+    private static final String PROFIT_BOOKING_REGEX =
+            "(?:Modify\\s+stop\\s+loss\\s+and\\s+)?book\\s+(\\d+)%\\s+profit\\s*|\\b(BOOK|PROFIT)\\s+(FULL|PARTIAL|REMAINING|TARGET)\\b";
+    private static final Pattern PROFIT_BOOKING_PATTERN = Pattern.compile(PROFIT_BOOKING_REGEX,
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    public MessagePattern getMessagePattern() {
+        return MessagePattern.EXIT_PROFIT_SIGNAL;
+    }
+
+    public BookProfitSingal getInstance(String signal) {
+        return new BookProfitSingal();
+    }
+}
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/trade/signal/EntrySignal.java>
+package com.trading.automated.nb.AutoTrader.trade.signal;
+
+import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
+import lombok.Data;
+
+import java.util.regex.Pattern;
+
+public class EntrySignal{
+
+    private String symbol;
+    private double lowerBound;
+    private double upperBound;
+    private double ltp;
+    private String action;
+
+    private static final String ENTRY_REGEX =
+            "(BUY|SELL)\\s*[–-]?\\s*[0-9]{1,2}\\s*[A-Z]{3,4}\\s*[–-]?\\s*\"?([A-Z]+)\\s*(\\d+)\\s*(CE|PE)\"?\\s*(between|@|at)\\s*(\\d+\\.?\\d*)\\s*[–-]?\\s*(\\d+\\.?\\d*)";
+    private static final Pattern ENTRY_PATTERN = Pattern.compile(ENTRY_REGEX,
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    public MessagePattern getMessagePattern() {
+        return MessagePattern.ENTRY_SIGNAL;
+    }
+
+    public EntrySignal getInstance(String signal) {
+        return null;
+    }
+}
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/trade/signal/StopLossSignal.java>
+package com.trading.automated.nb.AutoTrader.trade.signal;
+
+import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
+
+import java.util.regex.Pattern;
+
+public class StopLossSignal {
+
+    private static final String STOP_LOSS_TRIGGERED_REGEX =
+            "\\s*stop\\s*loss\\s*triggered\\s*";
+    private static final Pattern STOP_LOSS_TRIGGERED_PATTERN = Pattern.compile(STOP_LOSS_TRIGGERED_REGEX,
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    public MessagePattern getMessagePattern() {
+        return MessagePattern.EXIT_SL_SIGNAL;
+    }
+
+    public StopLossSignal getInstance(String signal) {
+        return null;
+    }
+}
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/entity/EntryEntity.java>
+package com.trading.automated.nb.AutoTrader.entity;
+
+
+public class EntryEntity {
+    private String action;
+    private String expiry;
+    private String contract;
+    private double priceA;
+    private double priceB;
+
+    public EntryEntity(String action, String expiry, String contract, double priceA, double priceB) {
+        this.action = action;
+        this.expiry = expiry;
+        this.contract = contract;
+        this.priceA = priceA;
+        this.priceB = priceB;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public void setAction(String action) {
+        this.action = action;
+    }
+
+    public String getExpiry() {
+        return expiry;
+    }
+
+    public void setExpiry(String expiry) {
+        this.expiry = expiry;
+    }
+
+    public String getContract() {
+        return contract;
+    }
+
+    public void setContract(String contract) {
+        this.contract = contract;
+    }
+
+    public double getPriceA() {
+        return priceA;
+    }
+
+    public void setPriceA(double priceA) {
+        this.priceA = priceA;
+    }
+
+    public double getPriceB() {
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/broker/factory/TradingAccountFactory.java>
+package com.trading.automated.nb.AutoTrader.broker.factory;
+
+import com.trading.automated.nb.AutoTrader.enums.BrokerType;
+import com.trading.automated.nb.AutoTrader.services.ITradingAccount;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+
+@Component
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/entity/EntryEntity.java>
+    public double getPriceB() {
+        return priceB;
+    }
+
+    public void setPriceB(double priceB) {
+        this.priceB = priceB;
+    }
+
+    public double getLowerBound(){
+        return Math.min(getPriceA(), getPriceB());
+    }
+
+    public double getUpperBound(){
+        return Math.max(getPriceA(), getPriceB());
+    }
+}
+
+</passage>
+<passage file_path=/src/main/java/com/trading/automated/nb/AutoTrader/trade/signal/UnknownSginal.java>
+package com.trading.automated.nb.AutoTrader.trade.signal;
+
+import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
+
+public class UnknownSginal {
+    public MessagePattern getMessagePattern() {
+        return MessagePattern.UNKNOWN_SIGNAL;
+    }
+
+    public UnknownSginal getInstance(String signal) {
+        return null;
+    }
+}
+
+</passage>

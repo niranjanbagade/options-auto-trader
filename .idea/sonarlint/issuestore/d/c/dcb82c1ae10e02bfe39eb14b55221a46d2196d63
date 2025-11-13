@@ -1,0 +1,23 @@
+
+t	java:S120"ZRename this package name to match the regular expression '^[a-z_]+(\.[a-z_][a-z0-9_]*)*$'.(Þ©¸‰þÿÿÿÿ
+R
+java:S6353"<Use concise character class syntax '\\d' instead of '[0-9]'.(ýŸå
+H
+java:S1172"-Remove this unused method parameter "signal".(Þ±÷®ûÿÿÿÿ
+C
+java:S1128"(Remove this unused import 'lombok.Data'.(÷í«ÿÿÿÿÿ
+j
+java:S5843"TSimplify this regular expression to reduce its complexity from 36 to the 20 allowed.(ýŸå
+@
+java:S1068
+"*Remove this unused "symbol" private field.(×¥±¥
+D
+java:S1068".Remove this unused "lowerBound" private field.(¥ÚÙõ
+D
+java:S1068".Remove this unused "upperBound" private field.( ÞŠÓ
+B
+java:S1068"'Remove this unused "ltp" private field.(ö¨Ñøÿÿÿÿ
+@
+java:S1068"*Remove this unused "action" private field.(ÃÐ”“
+L
+java:S1068"1Remove this unused "ENTRY_PATTERN" private field.(ÝÄ»„ùÿÿÿÿ
