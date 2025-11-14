@@ -7,5 +7,5 @@ public enum MessagePattern {
     UNKNOWN_SIGNAL,
     EXIT_SQUARE_OFF_SIGNAL, // General square-off signal
     EXIT_SQUARE_OFF_DUAL_LEG, // Dual-leg square-off
-    EXIT_SQUARE_OFF_SINGLE_LEG; // Single-leg square-off
+    EXIT_SQUARE_OFF_SINGLE_LEG, SQUARE_OFF_SIGNAL; // Single-leg square-off
 }

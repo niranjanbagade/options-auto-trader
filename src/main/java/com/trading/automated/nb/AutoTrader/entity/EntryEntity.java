@@ -1,22 +1,22 @@
 package com.trading.automated.nb.AutoTrader.entity;
 
-
 public class EntryEntity {
     private String action;
     private String expiry;
-    private String strikePrice;
-
+    private String strike;
     private String optionType;
     private double priceA;
     private double priceB;
+    private double stopLoss;
 
-    public EntryEntity(String action, String expiry, String strikePrice, String optionType, double priceA, double priceB) {
+    public EntryEntity(String action, String expiry, String strike, String optionType, double priceA, double priceB, double stopLoss) {
         this.action = action;
         this.expiry = expiry;
-        this.strikePrice = strikePrice;
+        this.strike = strike;
         this.optionType = optionType;
         this.priceA = priceA;
         this.priceB = priceB;
+        this.stopLoss = stopLoss;
     }
 
     public String getAction() {
@@ -35,12 +35,20 @@ public class EntryEntity {
         this.expiry = expiry;
     }
 
-    public String getStrikePrice() {
-        return strikePrice;
+    public String getStrike() {
+        return strike;
     }
 
-    public void setStrikePrice(String strikePrice) {
-        this.strikePrice = strikePrice;
+    public void setStrike(String strike) {
+        this.strike = strike;
+    }
+
+    public String getOptionType() {
+        return optionType;
+    }
+
+    public void setOptionType(String optionType) {
+        this.optionType = optionType;
     }
 
     public double getPriceA() {
@@ -59,19 +67,11 @@ public class EntryEntity {
         this.priceB = priceB;
     }
 
-    public double getLowerBound(){
-        return Math.min(getPriceA(), getPriceB());
+    public double getStopLoss() {
+        return stopLoss;
     }
 
-    public double getUpperBound(){
-        return Math.max(getPriceA(), getPriceB());
-    }
-
-    public String getOptionType() {
-        return optionType;
-    }
-
-    public void setOptionType(String optionType) {
-        this.optionType = optionType;
+    public void setStopLoss(double stopLoss) {
+        this.stopLoss = stopLoss;
     }
 }

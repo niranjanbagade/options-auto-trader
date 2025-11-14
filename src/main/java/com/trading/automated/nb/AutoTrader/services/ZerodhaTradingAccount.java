@@ -3,13 +3,13 @@ package com.trading.automated.nb.AutoTrader.services;
 import com.zerodhatech.kiteconnect.KiteConnect;
 import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
 import com.zerodhatech.kiteconnect.utils.Constants;
+import com.zerodhatech.models.Margin;
 import com.zerodhatech.models.Order;
 import com.zerodhatech.models.User;
 import com.zerodhatech.models.Quote;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -23,25 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service("zerodhaAccount") // Mark this class as a Spring Service
-public class ZerodhaTradingAccount implements ITradingAccount {
-
-    // Note: API Key and Secret should be String type, not int, as they contain alphanumeric characters.
-    @Value("${broker.api.key}")
-    private String apiKey;
-
-    @Value("${broker.api.secret}")
-    private String apiSecret;
-
-    @Value("${broker.name}")
-    private String brokerName;
-
-    @Value("${lots}")
-    private int lots;
-
-    private final String productType = "NRML";
-
-    private static final int LOT_SIZE = 75;
-
+public class ZerodhaTradingAccount extends TradingAccount {
     private KiteConnect kiteConnect;
     private String accessToken = null;
     private final Map<String, String> productMap = new ConcurrentHashMap<>();
@@ -74,7 +56,7 @@ public class ZerodhaTradingAccount implements ITradingAccount {
     }
 
     @Override
-    public ITradingAccount authenticate() throws IOException {
+    public void authenticate() throws IOException {
         this.kiteConnect = new KiteConnect(apiKey);
         logger.info("Starting Zerodha Authentication. Login URL: {}", getLoginUrl());
         Scanner scanner = new Scanner(System.in);
@@ -93,9 +75,10 @@ public class ZerodhaTradingAccount implements ITradingAccount {
 
             try {
                 generateSession(requestToken);
-                // add code to fetch the users margin details and also log how many lots can be bought with available margin assuming premium of 100 to 175 with stepup of25
+                telegramAckService.postMessage("Zerodha session generated successfully for user.");
+                fetchMarginDetailsAndCalculateLots();
                 logger.info("Zerodha session generated successfully.");
-                return this; // Exit the loop and return the authenticated instance
+                return;
             } catch (KiteException e) {
                 logger.error("KiteException during login (code: {}). Invalid token or credentials.", e.code);
                 System.out.println("\n!!! Login failed. Please try again with a valid request token. !!!\n");
@@ -109,33 +92,12 @@ public class ZerodhaTradingAccount implements ITradingAccount {
     // Fetch the user's margin details and calculate how many lots can be bought
     public void fetchMarginDetailsAndCalculateLots() {
         try {
-            // Fetch margin details using KiteConnect API
-            double availableMargin = 0.0;
             try {
-                Object marginsResponse = kiteConnect.getMargins("equity");
-                if (marginsResponse instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> margins = (Map<String, Object>) marginsResponse;
-                    availableMargin = (double) margins.get("available.cash");
-                    logger.info("Available Margin: {}", availableMargin);
-                } else {
-                    logger.error("Unexpected response type from getMargins: {}", marginsResponse.getClass().getName());
-                }
+                Margin marginsResponse = kiteConnect.getMargins("equity");
+                logger.info("Margin Details: net margin is {}", marginsResponse.net);
+                telegramAckService.postMessage("Net margin is: "+marginsResponse.net);
             } catch (Exception e) {
                 logger.error("Error fetching margins: {}", e.getMessage(), e);
-            }
-            logger.info("Available Margin: {}", availableMargin);
-
-            // Define premium range and step-up
-            int[] premiumRange = {100, 125, 150, 175};
-            for (int premium : premiumRange) {
-                // Calculate the cost of one lot
-                double costPerLot = premium * LOT_SIZE;
-
-                // Calculate the number of lots that can be bought
-                int maxLots = (int) (availableMargin / costPerLot);
-
-                logger.info("With premium {}: Cost per lot = {}, Max lots = {}", premium, costPerLot, maxLots);
             }
         } catch (KiteException e) {
             logger.error("Error fetching margin details or calculating lots: {}", e.getMessage(), e);
@@ -234,27 +196,42 @@ public class ZerodhaTradingAccount implements ITradingAccount {
         params.orderType = kiteOrderType;
         params.product = Constants.PRODUCT_NRML;
 
+        if(isTesting){
+            logger.info("Testing mode enabled - Order not placed. Params: {}", params);
+            telegramAckService.postMessage("Testing mode: Order not placed for " + tradingSymbol + " " + transactionType);
+            return "TEST_ORDER_ID_2727";
+        }
+
         int retryCount = 0;
         while (retryCount < 3) {
             try {
                 Order order = kiteConnect.placeOrder(params, Constants.VARIETY_REGULAR);
                 return order.orderId;
             } catch (KiteException e) {
-                if (e.message != null && e.message.contains("insufficient funds")) {
-                    logger.error("Order failed due to insufficient funds. No retry will be attempted.");
-                    throw e;
+                String errorMessage = e.message;
+
+                if (errorMessage != null) {
+                    if (errorMessage.contains("insufficient funds")) {
+                        logger.error("Order failed due to insufficient funds. No retry will be attempted.");
+                        throw e;
+                    }
+                    if (errorMessage.contains("Your order could not be converted to a After Market Order")) {
+                        logger.error("Order failed due to AMO conversion issue. No retry will be attempted.");
+                        throw e;
+                    }
                 }
+
                 retryCount++;
                 logger.warn("Order placement failed. Attempt {} of 3. Error: {}", retryCount, e.getMessage());
                 if (retryCount == 3) {
-                    logger.error("Order placement failed after 3 attempts. Giving up.");
+                    logger.error("Order placement failed after 3 attempts. Giving up. Error: {}", e.getMessage());
                     throw e;
                 }
             } catch (IOException e) {
                 retryCount++;
                 logger.warn("IO Error during order placement. Attempt {} of 3. Error: {}", retryCount, e.getMessage());
                 if (retryCount == 3) {
-                    logger.error("Order placement failed after 3 attempts due to IO error. Giving up.");
+                    logger.error("Order placement failed after 3 attempts due to IO error. Giving up. Error: {}", e.getMessage());
                     throw e;
                 }
             }
