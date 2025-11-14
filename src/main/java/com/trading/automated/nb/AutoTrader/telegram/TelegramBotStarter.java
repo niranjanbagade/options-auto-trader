@@ -1,10 +1,11 @@
 package com.trading.automated.nb.AutoTrader.telegram;
 
 import com.trading.automated.nb.AutoTrader.entity.EntryEntity;
+import com.trading.automated.nb.AutoTrader.entity.ExitEntity;
 import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
-import com.trading.automated.nb.AutoTrader.services.ITradingAccount;
 import com.trading.automated.nb.AutoTrader.services.PatternRecognitionService;
 import com.trading.automated.nb.AutoTrader.services.SignalParserService;
+import com.trading.automated.nb.AutoTrader.services.TradingAccount;
 import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +37,17 @@ public class TelegramBotStarter implements LongPollingBot {
     private String brokerName;
 
     @Autowired
-    private ITradingAccount tradingAccount;
+    private TradingAccount tradingAccount;
 
     @Autowired
     private SignalParserService parser;
 
+    @Autowired
+    TelegramAckService telegramAckService;
+
     private static final Logger logger = LoggerFactory.getLogger(TelegramBotStarter.class);
+
+    private static String expiryStr = null;
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -51,32 +57,42 @@ public class TelegramBotStarter implements LongPollingBot {
                 logger.info("Received Channel Post: " + messageText);
                 MessagePattern messagePattern = patternRecognitionService.getMessagePattern(messageText);
 
-                if(messagePattern.equals(MessagePattern.UNKNOWN_SIGNAL))
+                if (messagePattern.equals(MessagePattern.UNKNOWN_SIGNAL))
                     return;
 
-                switch(messagePattern){
+                switch (messagePattern) {
                     case ENTRY_SIGNAL:
                         logger.info("Entering trade");
-                        EntryEntity entry = parser.getEntryEntity(messageText);
-                        String tradeSymbol
-                                = tradingAccount.getSymbol(entry.getStrikePrice(), entry.getExpiry());
-                        logger.info("Result for symbol is :"+tradeSymbol);
-                        String orderId = tradingAccount.placeOrder(tradeSymbol, entry.getAction(), entry.getOptionType());
-                        logger.info("OrderId is : "+orderId);
+                        EntryEntity[] entities = parser.getEntryParams(messageText);
+                        for(EntryEntity entry : entities){
+                            String tradeSymbol
+                                    = tradingAccount.getSymbol("Nifty " + entry.getStrike() + " " + entry.getOptionType(), entry.getExpiry());
+                            logger.info("Result for symbol is :" + tradeSymbol);
+                            expiryStr = entry.getExpiry();
+                            String orderId = tradingAccount.placeOrder(tradeSymbol, entry.getAction(), entry.getOptionType());
+                            logger.info("OrderId is : " + orderId);
+                        }
                         break;
-                    case EXIT_SQUARE_OFF_DUAL_LEG:
-                        break;
-                    case EXIT_SQUARE_OFF_SINGLE_LEG:
+                    case SQUARE_OFF_SIGNAL:
+                        ExitEntity[] exitEntities = parser.getExitParams(messageText);
+                        for (ExitEntity exitEntity : exitEntities) {
+                            String dualLegExitSymbol = tradingAccount.getSymbol("Nifty " + exitEntity.getStrike() + " " + exitEntity.getOptionType(), expiryStr);
+                            String dualLegExitOrderId = tradingAccount.placeOrder(dualLegExitSymbol, exitEntity.getAction(), exitEntity.getOptionType());
+                            logger.info("Dual Leg Exit OrderId is : " + dualLegExitOrderId);
+                            telegramAckService.postMessage("Exited " + dualLegExitSymbol + " with order id " + dualLegExitOrderId);
+                        }
                         break;
                     case UNKNOWN_SIGNAL:
-                        logger.warn("Unknown signal detected ",messageText.substring(0, Math.min(20, messageText.length())));
+                        logger.warn("Unknown signal detected ", messageText.substring(0, Math.min(20, messageText.length())));
                         break;
-
                 }
+                telegramAckService.postMessage("Processed signal: " + messageText.substring(0, Math.min(50, messageText.length())));
             } catch (Exception e) {
+                telegramAckService.postMessage("Error processing signal: " + e.getMessage());
                 logger.error("Error processing signal: " + e.getMessage());
             } catch (KiteException e) {
-                logger.error("Exception from zerodha "+e.getMessage());
+                telegramAckService.postMessage("Exception from zerodha: " + e.message);
+                logger.error("Exception from zerodha " + e.getMessage());
             }
         }
     }

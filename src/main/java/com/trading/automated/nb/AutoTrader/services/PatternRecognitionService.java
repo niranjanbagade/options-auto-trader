@@ -17,12 +17,7 @@ public class PatternRecognitionService {
             return MessagePattern.UNKNOWN_SIGNAL;
         }
         if (SQUARE_OFF_PATTERN.matcher(cleanMessage).find()) {
-            // Check for dual-leg or single-leg square-off
-            if (cleanMessage.matches("(?i).*AND.*")) {
-                return MessagePattern.EXIT_SQUARE_OFF_DUAL_LEG;
-            } else {
-                return MessagePattern.EXIT_SQUARE_OFF_SINGLE_LEG;
-            }
+            return MessagePattern.SQUARE_OFF_SIGNAL;
         }
         if (ENTRY_PATTERN.matcher(cleanMessage).find()) {
             return MessagePattern.ENTRY_SIGNAL;
