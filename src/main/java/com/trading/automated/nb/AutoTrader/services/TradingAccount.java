@@ -31,13 +31,15 @@ public abstract class TradingAccount {
     // Authenticates and returns the authenticated instance.
     public abstract void authenticate() throws IOException, KiteException;
 
+    public abstract void startSessionKeepAlive();
+
     // Returns the Zerodha login URL for the initial request token.
     public abstract String getLoginUrl();
 
     public abstract void fetchMarginDetailsAndCalculateLots();
 
     // Places an order and returns the Order ID.
-    public abstract String placeOrder(String tradingSymbol, String transactionType, String orderType) throws IOException, KiteException;
+    public abstract String placeOrder(String tradingSymbol, String transactionType, String orderType, boolean isSquareOff) throws IOException, KiteException;
 
     // Checks the status of a specific order ID.
     public abstract String checkOrderStatus(String orderId) throws IOException, KiteException;

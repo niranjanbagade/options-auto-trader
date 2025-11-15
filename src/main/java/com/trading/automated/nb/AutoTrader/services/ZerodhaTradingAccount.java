@@ -1,5 +1,6 @@
 package com.trading.automated.nb.AutoTrader.services;
 
+import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
 import com.zerodhatech.kiteconnect.KiteConnect;
 import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
 import com.zerodhatech.kiteconnect.utils.Constants;
@@ -10,6 +11,8 @@ import com.zerodhatech.models.Quote;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -19,6 +22,9 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,6 +41,9 @@ public class ZerodhaTradingAccount extends TradingAccount {
 
     private static final Map<Integer, String> WEEKLY_MONTH_CODE_MAP = new HashMap<>();
 
+    @Autowired
+    private GlobalContextStore globalContextStore;
+
     static {
         for (int i = 1; i <= 9; i++) {
             WEEKLY_MONTH_CODE_MAP.put(i, String.valueOf(i));
@@ -46,8 +55,23 @@ public class ZerodhaTradingAccount extends TradingAccount {
 
     @PostConstruct
     public void init() throws IOException {
-        if (brokerName.equalsIgnoreCase("zerodha"))
+        if (brokerName.equalsIgnoreCase("zerodha")){
             this.authenticate();
+            this.startSessionKeepAlive();
+        }
+    }
+
+    @Override
+    public void startSessionKeepAlive() {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                fetchMarginDetailsAndCalculateLots();
+                logger.info("Session keep-alive task executed successfully.");
+            } catch (Exception e) {
+                logger.error("Error during session keep-alive task: {}", e.getMessage(), e);
+            }
+        }, 0, 2, TimeUnit.MINUTES);
     }
 
     @Override
@@ -76,7 +100,6 @@ public class ZerodhaTradingAccount extends TradingAccount {
             try {
                 generateSession(requestToken);
                 telegramAckService.postMessage("Zerodha session generated successfully for user.");
-                fetchMarginDetailsAndCalculateLots();
                 logger.info("Zerodha session generated successfully.");
                 return;
             } catch (KiteException e) {
@@ -95,7 +118,6 @@ public class ZerodhaTradingAccount extends TradingAccount {
             try {
                 Margin marginsResponse = kiteConnect.getMargins("equity");
                 logger.info("Margin Details: net margin is {}", marginsResponse.net);
-                telegramAckService.postMessage("Net margin is: "+marginsResponse.net);
             } catch (Exception e) {
                 logger.error("Error fetching margins: {}", e.getMessage(), e);
             }
@@ -184,7 +206,7 @@ public class ZerodhaTradingAccount extends TradingAccount {
     }
 
     @Override
-    public String placeOrder(String tradingSymbol, String transactionType, String optionType) throws IOException, KiteException {
+    public String placeOrder(String tradingSymbol, String transactionType, String optionType, boolean isSquareOff) throws IOException, KiteException {
         String kiteOrderType = Constants.ORDER_TYPE_MARKET;
         String kiteTransactionType = transactionType.equalsIgnoreCase("BUY") ? Constants.TRANSACTION_TYPE_BUY : Constants.TRANSACTION_TYPE_SELL;
 
@@ -205,18 +227,41 @@ public class ZerodhaTradingAccount extends TradingAccount {
         int retryCount = 0;
         while (retryCount < 3) {
             try {
-                Order order = kiteConnect.placeOrder(params, Constants.VARIETY_REGULAR);
-                return order.orderId;
+                if(isSquareOff) {
+                    if(!globalContextStore.containsKey(tradingSymbol)){
+                        logger.info("No existing position found for {}. Square off skipped.", tradingSymbol);
+                        telegramAckService.postMessage("No existing position to square off for " + tradingSymbol);
+                        return "NO_POSITION_TO_SQUARE_OFF";
+                    }
+                    logger.info("Square off detected for {}.", tradingSymbol);
+                    Order order = kiteConnect.placeOrder(params, Constants.ORDER_TYPE_MARKET);
+                    globalContextStore.removeKey(tradingSymbol);
+                    return order.orderId;
+                } else {
+                    logger.info("Placing fresh order for {} {}.", transactionType, tradingSymbol);
+                    Order order = kiteConnect.placeOrder(params, Constants.ORDER_TYPE_MARKET);
+                    globalContextStore.setValue(tradingSymbol, kiteOrderType);
+                    telegramAckService.postMessage("Order placed: " + tradingSymbol + " " + transactionType + " Order ID: " + order.orderId);
+                    return order.orderId;
+                }
             } catch (KiteException e) {
                 String errorMessage = e.message;
 
                 if (errorMessage != null) {
                     if (errorMessage.contains("insufficient funds")) {
-                        logger.error("Order failed due to insufficient funds. No retry will be attempted.");
+                        logger.error("Order placement failed for {} {} due to insufficient funds. No retry will be attempted.", transactionType, tradingSymbol);
                         throw e;
                     }
                     if (errorMessage.contains("Your order could not be converted to a After Market Order")) {
-                        logger.error("Order failed due to AMO conversion issue. No retry will be attempted.");
+                        logger.error("Order placement failed for {} {} due to AMO conversion issue. No retry will be attempted.", transactionType, tradingSymbol);
+                        throw e;
+                    }
+                    if (errorMessage.contains("Markets are closed right now")) {
+                        logger.error("Order placement failed for {} {} because markets are closed right now.", transactionType, tradingSymbol);
+                        throw e;
+                    }
+                    if(errorMessage.contains("Request method not allowed")){
+                        logger.error("Order placement failed for {} {} due to Request method not allowed.", transactionType, tradingSymbol);
                         throw e;
                     }
                 }

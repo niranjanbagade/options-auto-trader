@@ -1,5 +1,7 @@
 package com.trading.automated.nb.AutoTrader.telegram;
 
+import com.hazelcast.core.HazelcastInstance;
+import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
 import com.trading.automated.nb.AutoTrader.entity.EntryEntity;
 import com.trading.automated.nb.AutoTrader.entity.ExitEntity;
 import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
@@ -20,7 +22,7 @@ import org.telegram.telegrambots.meta.generics.LongPollingBot;
 import org.telegram.telegrambots.meta.generics.TelegramBot;
 
 @Component
-public class TelegramBotStarter implements LongPollingBot {
+public class TelegramObserverBot implements LongPollingBot {
 
     @Autowired
     private PatternRecognitionService patternRecognitionService;
@@ -45,9 +47,10 @@ public class TelegramBotStarter implements LongPollingBot {
     @Autowired
     TelegramAckService telegramAckService;
 
-    private static final Logger logger = LoggerFactory.getLogger(TelegramBotStarter.class);
+    @Autowired
+    GlobalContextStore globalContextStore;
 
-    private static String expiryStr = null;
+    private static final Logger logger = LoggerFactory.getLogger(TelegramObserverBot.class);
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -68,18 +71,16 @@ public class TelegramBotStarter implements LongPollingBot {
                             String tradeSymbol
                                     = tradingAccount.getSymbol("Nifty " + entry.getStrike() + " " + entry.getOptionType(), entry.getExpiry());
                             logger.info("Result for symbol is :" + tradeSymbol);
-                            expiryStr = entry.getExpiry();
-                            String orderId = tradingAccount.placeOrder(tradeSymbol, entry.getAction(), entry.getOptionType());
+                            String orderId = tradingAccount.placeOrder(tradeSymbol, entry.getAction(), entry.getOptionType(), false);
                             logger.info("OrderId is : " + orderId);
                         }
                         break;
                     case SQUARE_OFF_SIGNAL:
                         ExitEntity[] exitEntities = parser.getExitParams(messageText);
                         for (ExitEntity exitEntity : exitEntities) {
-                            String dualLegExitSymbol = tradingAccount.getSymbol("Nifty " + exitEntity.getStrike() + " " + exitEntity.getOptionType(), expiryStr);
-                            String dualLegExitOrderId = tradingAccount.placeOrder(dualLegExitSymbol, exitEntity.getAction(), exitEntity.getOptionType());
+                            String dualLegExitSymbol = tradingAccount.getSymbol("Nifty " + exitEntity.getStrike() + " " + exitEntity.getOptionType(), globalContextStore.getValue("expiry"));
+                            String dualLegExitOrderId = tradingAccount.placeOrder(dualLegExitSymbol, exitEntity.getAction(), exitEntity.getOptionType(), true);
                             logger.info("Dual Leg Exit OrderId is : " + dualLegExitOrderId);
-                            telegramAckService.postMessage("Exited " + dualLegExitSymbol + " with order id " + dualLegExitOrderId);
                         }
                         break;
                     case UNKNOWN_SIGNAL:
