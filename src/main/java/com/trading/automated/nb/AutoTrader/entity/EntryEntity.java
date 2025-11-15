@@ -1,5 +1,7 @@
 package com.trading.automated.nb.AutoTrader.entity;
 
+import org.springframework.cache.annotation.Cacheable;
+
 public class EntryEntity {
     private String action;
     private String expiry;

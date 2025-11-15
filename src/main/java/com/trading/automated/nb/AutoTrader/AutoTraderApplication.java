@@ -1,12 +1,13 @@
 package com.trading.automated.nb.AutoTrader;
 
-import com.trading.automated.nb.AutoTrader.telegram.TelegramBotStarter;
+import com.trading.automated.nb.AutoTrader.telegram.TelegramObserverBot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -15,10 +16,10 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @SpringBootApplication
 @ComponentScan
 public class AutoTraderApplication implements CommandLineRunner {
-	private static final Logger logger = LoggerFactory.getLogger(TelegramBotStarter.class);
+	private static final Logger logger = LoggerFactory.getLogger(TelegramObserverBot.class);
 
 	@Autowired
-	private TelegramBotStarter telegramBotStarter;
+	private TelegramObserverBot telegramObserverBot;
 
 	public static void main(String[] args) {
 		SpringApplication.run(AutoTraderApplication.class, args);
@@ -29,7 +30,7 @@ public class AutoTraderApplication implements CommandLineRunner {
 		logger.debug("Starting Telegram bot polling.");
 		try {
 			TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-			botsApi.registerBot(telegramBotStarter);
+			botsApi.registerBot(telegramObserverBot);
 		} catch (TelegramApiException e) {
 			logger.error("Failed to start Telegram Bot: " + e.getMessage());
 		}
