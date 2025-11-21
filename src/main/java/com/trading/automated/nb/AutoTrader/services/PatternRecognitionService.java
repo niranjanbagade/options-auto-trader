@@ -4,7 +4,7 @@ import com.trading.automated.nb.AutoTrader.enums.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import static com.trading.automated.nb.AutoTrader.services.Patterns.*;
+import static com.trading.automated.nb.AutoTrader.enums.Patterns.*;
 
 
 @Service

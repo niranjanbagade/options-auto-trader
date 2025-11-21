@@ -35,7 +35,7 @@ public class GlobalContextStore {
     }
 
     public String getValue(String key) {
-        return contextData.get(key);
+        return contextData.getOrDefault(key, null);
     }
     
     public Map<String, String> getAllValues() {
