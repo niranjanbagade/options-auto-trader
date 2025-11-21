@@ -1,6 +1,6 @@
 package com.trading.automated.nb.AutoTrader;
 
-import com.trading.automated.nb.AutoTrader.services.Patterns;
+import com.trading.automated.nb.AutoTrader.enums.Patterns;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
