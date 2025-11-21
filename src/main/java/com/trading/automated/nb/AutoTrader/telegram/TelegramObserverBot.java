@@ -1,14 +1,13 @@
 package com.trading.automated.nb.AutoTrader.telegram;
 
-import com.hazelcast.core.HazelcastInstance;
 import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
 import com.trading.automated.nb.AutoTrader.entity.EntryEntity;
 import com.trading.automated.nb.AutoTrader.entity.ExitEntity;
 import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
+import com.trading.automated.nb.AutoTrader.exceptions.ApiException;
 import com.trading.automated.nb.AutoTrader.services.PatternRecognitionService;
 import com.trading.automated.nb.AutoTrader.services.SignalParserService;
-import com.trading.automated.nb.AutoTrader.services.TradingAccount;
-import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
+import com.trading.automated.nb.AutoTrader.services.master.MasterTrader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,32 +22,19 @@ import org.telegram.telegrambots.meta.generics.TelegramBot;
 
 @Component
 public class TelegramObserverBot implements LongPollingBot {
-
     @Autowired
     private PatternRecognitionService patternRecognitionService;
-
     @Value("${telegram.bot.token}")
     private String botToken;
-
     private TelegramBot telegramBot;
-
     @Value("${telegram.channel.id}")
     private String targetChannelId;
-
-    @Value("${broker.name}")
-    private String brokerName;
-
-    @Autowired
-    private TradingAccount tradingAccount;
-
     @Autowired
     private SignalParserService parser;
-
-    @Autowired
-    TelegramAckService telegramAckService;
-
     @Autowired
     GlobalContextStore globalContextStore;
+    @Autowired
+    private MasterTrader masterTrader;
 
     private static final Logger logger = LoggerFactory.getLogger(TelegramObserverBot.class);
 
@@ -67,33 +53,34 @@ public class TelegramObserverBot implements LongPollingBot {
                     case ENTRY_SIGNAL:
                         logger.info("Entering trade");
                         EntryEntity[] entities = parser.getEntryParams(messageText);
-                        for(EntryEntity entry : entities){
-                            String tradeSymbol
-                                    = tradingAccount.getSymbol("Nifty " + entry.getStrike() + " " + entry.getOptionType(), entry.getExpiry());
-                            logger.info("Result for symbol is :" + tradeSymbol);
-                            String orderId = tradingAccount.placeOrder(tradeSymbol, entry.getAction(), entry.getOptionType(), false);
-                            logger.info("OrderId is : " + orderId);
-                        }
+                        masterTrader.executeEntryTrade(entities);
                         break;
                     case SQUARE_OFF_SIGNAL:
                         ExitEntity[] exitEntities = parser.getExitParams(messageText);
-                        for (ExitEntity exitEntity : exitEntities) {
-                            String dualLegExitSymbol = tradingAccount.getSymbol("Nifty " + exitEntity.getStrike() + " " + exitEntity.getOptionType(), globalContextStore.getValue("expiry"));
-                            String dualLegExitOrderId = tradingAccount.placeOrder(dualLegExitSymbol, exitEntity.getAction(), exitEntity.getOptionType(), true);
-                            logger.info("Dual Leg Exit OrderId is : " + dualLegExitOrderId);
-                        }
+                        masterTrader.executeExitTrade(exitEntities);
+//                        for (ExitEntity exitEntity : exitEntities) {
+//                            String dualLegExitSymbol = tradingAccount.getSymbol("Nifty " + exitEntity.getStrike() + " " + exitEntity.getOptionType(), globalContextStore.getValue("expiry"));
+//                            if(exitEntity.getAction().equalsIgnoreCase("Sell") && onlyOptionsBuying){
+//                                String dualLegExitOrderId = tradingAccount.placeOrder(dualLegExitSymbol, exitEntity.getAction(), exitEntity.getOptionType(), true);
+//                                logger.info("Dual Leg Exit OrderId is : " + dualLegExitOrderId);
+//                            }else{
+//                                logger.info("Exit Action is {}", exitEntity.getAction(), "only options buying flag {}",onlyOptionsBuying);
+//                                String dualLegExitOrderId = tradingAccount.placeOrder(dualLegExitSymbol, exitEntity.getAction(), exitEntity.getOptionType(), true);
+//                                logger.info("Dual Leg Exit OrderId is : " + dualLegExitOrderId);
+//                            }
+//                        }
                         break;
                     case UNKNOWN_SIGNAL:
                         logger.warn("Unknown signal detected ", messageText.substring(0, Math.min(20, messageText.length())));
                         break;
                 }
-                telegramAckService.postMessage("Processed signal: " + messageText.substring(0, Math.min(50, messageText.length())));
+//                telegramAckService.postMessage("Processed signal: " + messageText.substring(0, Math.min(50, messageText.length())));
+            } catch (ApiException e){
+//                telegramAckService.postMessage("API Error processing signal: " + e.toString());
+                logger.error("API Error processing signal: " + e.toString());
             } catch (Exception e) {
-                telegramAckService.postMessage("Error processing signal: " + e.getMessage());
+//                telegramAckService.postMessage("Error processing signal: " + e.getMessage());
                 logger.error("Error processing signal: " + e.getMessage());
-            } catch (KiteException e) {
-                telegramAckService.postMessage("Exception from zerodha: " + e.message);
-                logger.error("Exception from zerodha " + e.getMessage());
             }
         }
     }

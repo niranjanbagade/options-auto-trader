@@ -1,4 +1,4 @@
-package com.trading.automated.nb.AutoTrader.services;
+package com.trading.automated.nb.AutoTrader.enums;
 
 import java.util.regex.Pattern;
 
