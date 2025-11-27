@@ -19,4 +19,14 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+    @Bean(name = "telegramExecutor")
+    public Executor telegramExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(20);      // set pool size as required
+        executor.setMaxPoolSize(100);
+        executor.setQueueCapacity(500);
+        executor.setThreadNamePrefix("TelegramSender-");
+        executor.initialize();
+        return executor;
+    }
 }

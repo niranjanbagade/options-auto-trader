@@ -1,8 +1,7 @@
 package com.trading.automated.nb.AutoTrader.services.master.follower;
 
 import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
-import com.trading.automated.nb.AutoTrader.config.ZerodhaTradingConfig;
-import com.trading.automated.nb.AutoTrader.entity.EntryEntity;
+import com.trading.automated.nb.AutoTrader.dtos.UnifiedClientData;
 import com.trading.automated.nb.AutoTrader.enums.MessageImportance;
 import com.trading.automated.nb.AutoTrader.exceptions.RetryableOrderException;
 import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageService;
@@ -55,33 +54,13 @@ public class ZerodhaFollowerService {
             backoff = @Backoff(delay = 500, multiplier = 2) // Exponential (1s, 2s) between attempts
     )
     public CompletableFuture<Boolean> placeOrderAsync(
-            String tradingSymbol, String optionType, String action, boolean isSquareOff, ZerodhaTradingConfig.ZerodhaAccount account, String accessToken) {
+            String tradingSymbol, String optionType, String action, boolean isSquareOff, UnifiedClientData account, String accessToken) {
         final String clientName = account.getClientName();
         final String key = clientName + "_" + tradingSymbol + "_" + optionType;
-        if (isSquareOff) {
-            final String value = globalContextStore.getValue(key);
-            if (value == null) {
-                String message = "No existing position found for square off: " + tradingSymbol;
-                logger.info(message + " for " + clientName);
-                telegramService.sendMessage(account.getClientTelegramId(), message, MessageImportance.HIGH);
-                return CompletableFuture.completedFuture(false);
-            }
-            boolean validSquareOff =
-                    ("BUY".equals(value) && "SELL".equals(action)) ||
-                            ("SELL".equals(value) && "BUY".equals(action));
-            if (validSquareOff) {
-                logger.info("Square off " + value + " position for: " + tradingSymbol + " for " + clientName);
-                // Continue with square off logic...
-            } else {
-                String message = "No matching position found to square off for: " + tradingSymbol;
-                logger.info(message + " for " + clientName);
-                telegramService.sendMessage(account.getClientTelegramId(), message, MessageImportance.HIGH);
-                return CompletableFuture.completedFuture(false);
-            }
-        }
+
         try {
             String urlString = "https://api.kite.trade/orders/regular";
-            String apiKey = account.getKey();
+            String apiKey = account.getApiKey();
             HttpURLConnection conn = null;
 
             try {
@@ -118,9 +97,13 @@ public class ZerodhaFollowerService {
 
                 int responseCode = conn.getResponseCode();
                 if (responseCode == HttpURLConnection.HTTP_OK) {
-                    telegramService.sendMessage(account.getClientTelegramId(),
+                    telegramService.sendMessage(account.getTelegramChannelId(),
                             "Order placed successfully: " + action + " " + tradingSymbol, MessageImportance.GOOD);
-                    globalContextStore.setValue(key, action);
+                    if (isSquareOff) {
+                        globalContextStore.removeKey(key);
+                    } else {
+                        globalContextStore.setValue(key, action);
+                    }
                     return CompletableFuture.completedFuture(true);
                 } else {
                     String errorMessage = "";
@@ -136,7 +119,7 @@ public class ZerodhaFollowerService {
                                 errorMessage = errorJson.getString("message");
                                 logger.error("Order placement failed for {} {}. HTTP {} Response: {}",
                                         action, tradingSymbol, responseCode, errorMessage);
-                                telegramService.sendMessage(account.getClientTelegramId(),
+                                telegramService.sendMessage(account.getTelegramChannelId(),
                                         "Order placement failed for " + action + " " + tradingSymbol +
                                                 ". HTTP " + responseCode + " Response: " + errorMessage, MessageImportance.MEDIUM);
                             }
@@ -176,7 +159,7 @@ public class ZerodhaFollowerService {
     // When retries are exhausted
     @Recover
     public CompletableFuture<Boolean> recover(RetryableOrderException e,
-                                              String tradingSymbol, String action, boolean isSquareOff, ZerodhaTradingConfig.ZerodhaAccount account) {
+                                              String tradingSymbol, String action, boolean isSquareOff, UnifiedClientData account) {
         logger.error("Retries exhausted for order placement for {} {}: {}", action, tradingSymbol, e.getMessage());
         telegramService.sendMessage(account.getClientName(),
                 "Order placement failed after retries for " + action + " " + tradingSymbol +
