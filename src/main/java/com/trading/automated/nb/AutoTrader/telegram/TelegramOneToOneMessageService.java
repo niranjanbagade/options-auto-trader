@@ -1,9 +1,8 @@
 package com.trading.automated.nb.AutoTrader.telegram;
 
 import com.trading.automated.nb.AutoTrader.enums.MessageImportance;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.OutputStream;
@@ -13,12 +12,15 @@ import java.nio.charset.StandardCharsets;
 
 @Service
 public class TelegramOneToOneMessageService {
-    private static final Logger logger = LoggerFactory.getLogger(TelegramOneToOneMessageService.class);
-    @Value("${telegram.bot.token}")
+    @Value("${telegram.publisher.bot}")
     private String botToken;
+
+    @Async("telegramExecutor")
     public void sendMessage(String chatId,String message, MessageImportance importance) {
         try {
             String urlString = "https://api.telegram.org/bot" + botToken + "/sendMessage";
+            if(!chatId.startsWith("-"))
+                chatId = "-"+chatId;
             message = getSymbol(importance) + " " + message;
             String payload = String.format("{\"chat_id\":\"%s\", \"text\":\"%s\"}", chatId, message);
 
@@ -42,17 +44,12 @@ public class TelegramOneToOneMessageService {
     }
 
     private String getSymbol(MessageImportance importance) {
-        switch (importance) {
-            case HIGH:
-                return "❗";
-            case MEDIUM:
-                return "⚠️";
-            case LOW:
-                return "ℹ️";
-            case GOOD:
-                return "✅";
-            default:
-                return "";
-        }
+        return switch (importance) {
+            case HIGH -> "❗";
+            case MEDIUM -> "⚠️";
+            case LOW -> "ℹ️";
+            case GOOD -> "✅";
+            default -> "";
+        };
     }
 }

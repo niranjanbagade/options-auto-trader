@@ -1,23 +1,11 @@
-package com.trading.automated.nb.AutoTrader.services;
+package com.trading.automated.nb.AutoTrader.services.brokers;
 
 import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
-import com.trading.automated.nb.AutoTrader.config.ZerodhaTradingConfig;
-import com.trading.automated.nb.AutoTrader.entity.EntryEntity;
-import com.trading.automated.nb.AutoTrader.exceptions.ApiException;
-import com.trading.automated.nb.AutoTrader.exceptions.RetryableOrderException;
 import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageService;
-import com.zerodhatech.kiteconnect.KiteConnect;
-import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
-import com.zerodhatech.kiteconnect.utils.Constants;
-import com.zerodhatech.models.Order;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -25,7 +13,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +23,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,13 +34,7 @@ public class ZerodhaTradeService {
     private static final Pattern CONTRACT_PATTERN =
             Pattern.compile("([A-Z]+)\\s*(\\d+)\\s*(CE|PE)", Pattern.CASE_INSENSITIVE);
 
-
-    @Autowired
-    TelegramOneToOneMessageService telegramService;
-
     private static final Map<Integer, String> WEEKLY_MONTH_CODE_MAP = new HashMap<>();
-    @Autowired
-    private GlobalContextStore globalContextStore;
 
     static {
         for (int i = 1; i <= 9; i++) {

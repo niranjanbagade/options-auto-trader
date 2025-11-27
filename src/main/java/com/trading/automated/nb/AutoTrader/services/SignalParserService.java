@@ -15,6 +15,8 @@ public class SignalParserService {
 
     private static final Logger logger = LoggerFactory.getLogger(SignalParserService.class);
 
+    private static final String EXPIRY = "expiry";
+
     @Autowired
     private GlobalContextStore globalContextStore;
 
@@ -65,7 +67,7 @@ public class SignalParserService {
                 double stopLoss = Double.parseDouble(matcher.group(8));
 
                 EntryEntity entry = new EntryEntity(action, expiry, strike, optionType, priceA, priceB, stopLoss);
-                globalContextStore.setValue("expiry", expiry);
+                globalContextStore.setValue(expiry, expiry);
                 return new EntryEntity[]{entry};
             } catch (NumberFormatException e) {
                 logger.error("Error parsing price or stop loss values in single trade pattern: {}", message, e);
@@ -92,7 +94,7 @@ public class SignalParserService {
                 double priceA1 = Double.parseDouble(matcher.group(5));
                 double priceB1 = Double.parseDouble(matcher.group(6));
                 double stopLoss1 = Double.parseDouble(matcher.group(15));
-                globalContextStore.setValue("expiry", expiry1);
+                globalContextStore.setValue(EXPIRY, expiry1);
                 EntryEntity entry1 = new EntryEntity(action1, expiry1, strike1, optionType1, priceA1, priceB1, stopLoss1);
 
                 // Second trade details
@@ -103,7 +105,7 @@ public class SignalParserService {
                 double priceA2 = Double.parseDouble(matcher.group(11));
                 double priceB2 = Double.parseDouble(matcher.group(12));
                 double stopLoss2 = Double.parseDouble(matcher.group(18));
-                globalContextStore.setValue("expiry", expiry2);
+                globalContextStore.setValue(EXPIRY, expiry2);
                 EntryEntity entry2 = new EntryEntity(action2, expiry2, strike2, optionType2, priceA2, priceB2, stopLoss2);
 
                 return new EntryEntity[]{entry1, entry2};

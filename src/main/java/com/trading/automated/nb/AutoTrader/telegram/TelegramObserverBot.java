@@ -8,42 +8,96 @@ import com.trading.automated.nb.AutoTrader.exceptions.ApiException;
 import com.trading.automated.nb.AutoTrader.services.PatternRecognitionService;
 import com.trading.automated.nb.AutoTrader.services.SignalParserService;
 import com.trading.automated.nb.AutoTrader.services.master.MasterTrader;
+import jakarta.annotation.PostConstruct;
+import org.apache.http.client.config.RequestConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
-import org.telegram.telegrambots.meta.generics.BotOptions;
-import org.telegram.telegrambots.meta.generics.LongPollingBot;
-import org.telegram.telegrambots.meta.generics.TelegramBot;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Component
-public class TelegramObserverBot implements LongPollingBot {
-    @Autowired
-    private PatternRecognitionService patternRecognitionService;
-    @Value("${telegram.bot.token}")
-    private String botToken;
-    private TelegramBot telegramBot;
-    @Value("${telegram.channel.id}")
-    private String targetChannelId;
-    @Autowired
-    private SignalParserService parser;
-    @Autowired
-    GlobalContextStore globalContextStore;
-    @Autowired
-    private MasterTrader masterTrader;
+public class TelegramObserverBot extends TelegramLongPollingBot {
 
     private static final Logger logger = LoggerFactory.getLogger(TelegramObserverBot.class);
 
+    @Autowired
+    private PatternRecognitionService patternRecognitionService;
+    @Autowired
+    private SignalParserService parser;
+    @Autowired
+    private GlobalContextStore globalContextStore;
+    @Autowired
+    private MasterTrader masterTrader;
+
+    @Value("${telegram.listener.bot}")
+    private String botToken;
+
+    @Value("${telegram.listener.bot.username}")
+    private String listenerBotUsername;
+
+    @Value("${telegram.channel.id}")
+    private String targetChannelId;
+
+    @Value("${spring.profiles.active:}") // Inject active profiles, or empty string if none
+    private String activeProfiles;
+
+    @PostConstruct
+    public void sendStartupMessage() {
+        SendMessage message = new SendMessage();
+        message.setChatId(targetChannelId); // should be the channel ID, e.g., "-1001234567890"
+        message.setText("bot is listening for signals...");
+        try {
+            if (!"prod".equalsIgnoreCase(activeProfiles)) {
+                message.setText("bot is listening for signals... [Profiles: " + activeProfiles + "]");
+                execute(message);
+            }
+        } catch (TelegramApiException e) {
+            logger.error("Error sending startup message", e);
+        }
+    }
+
+
+    public TelegramObserverBot(@Value("${telegram.listener.bot}") String botToken) {
+        super(getBotOptions());
+        this.botToken = botToken;
+    }
+
+    private static DefaultBotOptions getBotOptions() {
+        DefaultBotOptions options = new DefaultBotOptions();
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(30000)  // 30 seconds
+                .setSocketTimeout(30000)   // 30 seconds
+                .build();
+        options.setRequestConfig(requestConfig);
+        return options;
+    }
+
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasChannelPost() && targetChannelId.equals(update.getChannelPost().getChatId().toString())) {
-            try {
+        try {
+            if (update.hasChannelPost() && targetChannelId.equals(update.getChannelPost().getChatId().toString())) {
+                int updateDate = update.getChannelPost().getDate(); // seconds since epoch (UTC)
+                long now = System.currentTimeMillis() / 1000L; // current seconds since epoch (UTC)
+                if (now - updateDate > 30) {
+                    logger.info("Skipping message older than 30 seconds. Message date: {}, Now: {}, Difference: {} seconds",
+                            updateDate, now, now - updateDate);
+                    return;
+                }
+
                 String messageText = update.getChannelPost().getText();
-                logger.info("Received Channel Post: " + messageText);
+                logger.info("Received Channel Post: {}", messageText);
+
+                if (messageText == null) {
+                    logger.info("Skipping Channel Post because it contains no text.");
+                    return;
+                }
+
                 MessagePattern messagePattern = patternRecognitionService.getMessagePattern(messageText);
 
                 if (messagePattern.equals(MessagePattern.UNKNOWN_SIGNAL))
@@ -58,46 +112,25 @@ public class TelegramObserverBot implements LongPollingBot {
                     case SQUARE_OFF_SIGNAL:
                         ExitEntity[] exitEntities = parser.getExitParams(messageText);
                         masterTrader.executeExitTrade(exitEntities);
-//                        for (ExitEntity exitEntity : exitEntities) {
-//                            String dualLegExitSymbol = tradingAccount.getSymbol("Nifty " + exitEntity.getStrike() + " " + exitEntity.getOptionType(), globalContextStore.getValue("expiry"));
-//                            if(exitEntity.getAction().equalsIgnoreCase("Sell") && onlyOptionsBuying){
-//                                String dualLegExitOrderId = tradingAccount.placeOrder(dualLegExitSymbol, exitEntity.getAction(), exitEntity.getOptionType(), true);
-//                                logger.info("Dual Leg Exit OrderId is : " + dualLegExitOrderId);
-//                            }else{
-//                                logger.info("Exit Action is {}", exitEntity.getAction(), "only options buying flag {}",onlyOptionsBuying);
-//                                String dualLegExitOrderId = tradingAccount.placeOrder(dualLegExitSymbol, exitEntity.getAction(), exitEntity.getOptionType(), true);
-//                                logger.info("Dual Leg Exit OrderId is : " + dualLegExitOrderId);
-//                            }
-//                        }
                         break;
                     case UNKNOWN_SIGNAL:
-                        logger.warn("Unknown signal detected ", messageText.substring(0, Math.min(20, messageText.length())));
+                        logger.warn("Unknown signal detected: {}", messageText.substring(0, Math.min(20, messageText.length())));
+                        break;
+                    default:
+                        logger.warn("Unhandled message pattern: {}", messagePattern);
                         break;
                 }
-//                telegramAckService.postMessage("Processed signal: " + messageText.substring(0, Math.min(50, messageText.length())));
-            } catch (ApiException e){
-//                telegramAckService.postMessage("API Error processing signal: " + e.toString());
-                logger.error("API Error processing signal: " + e.toString());
-            } catch (Exception e) {
-//                telegramAckService.postMessage("Error processing signal: " + e.getMessage());
-                logger.error("Error processing signal: " + e.getMessage());
             }
+        } catch (ApiException e) {
+            logger.error("API Error processing signal", e);
+        } catch (Exception e) {
+            logger.error("Error processing signal", e);
         }
     }
 
     @Override
-    public BotOptions getOptions() {
-        return new DefaultBotOptions();
-    }
-
-    @Override
-    public void clearWebhook() throws TelegramApiRequestException {
-
-    }
-
-    @Override
     public String getBotUsername() {
-        return "TradingBot909";
+        return listenerBotUsername;
     }
 
     @Override
