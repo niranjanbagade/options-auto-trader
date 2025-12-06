@@ -140,18 +140,38 @@ public class ActiveClientsService {
         return row.get(index).toString().trim();
     }
 
+    // Update this method in `src/main/java/com/trading/automated/nb/AutoTrader/services/google/ActiveClientsService.java`
     private LocalDateTime parseTimestamp(String timestampStr) {
         if (timestampStr == null || timestampStr.isEmpty()) return null;
 
-        // Matches format: "11/21/2025 22:26:31"
-        // Adjusted pattern to MM/dd/yyyy HH:mm:ss based on your sample
-        try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
-            return LocalDateTime.parse(timestampStr, formatter);
-        } catch (DateTimeParseException e) {
-            // Fallback: Attempt standard ISO or other formats if manual entry varies
-            logger.warn("Could not parse date: " + timestampStr);
-            return null;
+        // Accept common variants: single- or double-digit month/day/hour and also ISO if present
+        DateTimeFormatter[] formatters = new DateTimeFormatter[] {
+                DateTimeFormatter.ofPattern("M/d/yyyy H:mm:ss"),   // e.g. 11/26/2025 9:07:58 or 1/2/2025 5:06:07
+                DateTimeFormatter.ofPattern("MM/dd/yyyy H:mm:ss"), // e.g. 11/26/2025 09:07:58 (hour single-digit tolerated)
+                DateTimeFormatter.ofPattern("M/d/yyyy HH:mm:ss"),  // alternative
+                DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"),
+                DateTimeFormatter.ISO_LOCAL_DATE_TIME
+        };
+
+        for (DateTimeFormatter fmt : formatters) {
+            try {
+                return LocalDateTime.parse(timestampStr, fmt);
+            } catch (DateTimeParseException ignored) {
+                // try next
+            }
         }
+
+        // Final attempt: normalize common separators/spaces then try again
+        String normalized = timestampStr.trim().replaceAll("\\s+", " ");
+        for (DateTimeFormatter fmt : formatters) {
+            try {
+                return LocalDateTime.parse(normalized, fmt);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        logger.warn("Could not parse date: {}", timestampStr);
+        return null;
     }
+
 }

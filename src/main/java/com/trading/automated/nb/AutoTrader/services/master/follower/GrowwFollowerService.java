@@ -205,7 +205,7 @@ public class GrowwFollowerService {
                     .append("Action: ").append(action).append(" ").append(tradingSymbol).append("\n")
                     .append("Status: Acknowledged by Groww system (`").append(status).append("`)\n")
                     .append("Groww ID: `").append(orderId).append("`\n")
-                    .append("Note: Status will update to FILLED or REJECTED shortly. Keep an eye on your account.");
+                    .append("Note: Status will update to APPROVED or FILLED or REJECTED shortly. Keep an eye on your account.");
         } else if ("REJECTED".equalsIgnoreCase(status) || "CANCELLED".equalsIgnoreCase(status)) {
             sb.append("❌ **ORDER REJECTED**\n\n")
                     .append("Action: ").append(action).append(" ").append(tradingSymbol).append("\n")

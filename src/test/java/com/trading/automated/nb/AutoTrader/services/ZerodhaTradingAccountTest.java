@@ -1,19 +1,12 @@
 package com.trading.automated.nb.AutoTrader.services;
 
 import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
+import com.trading.automated.nb.AutoTrader.services.brokers.ZerodhaTradeService;
 import com.zerodhatech.kiteconnect.KiteConnect;
-import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
-import com.zerodhatech.kiteconnect.utils.Constants;
-import com.zerodhatech.models.Order;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.io.IOException;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ZerodhaTradingAccountTest {

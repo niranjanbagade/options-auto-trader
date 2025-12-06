@@ -109,7 +109,7 @@ public class MasterTrader {
                 UnifiedClientData account = accountEntry.getValue();
 
                 if ("OnlyOptionsBuying".equalsIgnoreCase(account.getClientPreference()) && exit.getAction().equalsIgnoreCase("Buy")) {
-                    logger.info("Skipping Sell order for account: {} due to OnlyOptionsBuying preference", account.getClientName());
+                    logger.debug("Skipping Sell order for account: {} due to OnlyOptionsBuying preference", account.getClientName());
                     continue;
                 }
 
