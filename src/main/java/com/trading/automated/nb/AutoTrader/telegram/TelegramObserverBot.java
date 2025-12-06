@@ -1,6 +1,5 @@
 package com.trading.automated.nb.AutoTrader.telegram;
 
-import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
 import com.trading.automated.nb.AutoTrader.entity.EntryEntity;
 import com.trading.automated.nb.AutoTrader.entity.ExitEntity;
 import com.trading.automated.nb.AutoTrader.enums.MessagePattern;
@@ -31,8 +30,6 @@ public class TelegramObserverBot extends TelegramLongPollingBot {
     @Autowired
     private SignalParserService parser;
     @Autowired
-    private GlobalContextStore globalContextStore;
-    @Autowired
     private MasterTrader masterTrader;
 
     @Value("${telegram.listener.bot}")
@@ -62,7 +59,6 @@ public class TelegramObserverBot extends TelegramLongPollingBot {
         }
     }
 
-
     public TelegramObserverBot(@Value("${telegram.listener.bot}") String botToken) {
         super(getBotOptions());
         this.botToken = botToken;
@@ -71,8 +67,8 @@ public class TelegramObserverBot extends TelegramLongPollingBot {
     private static DefaultBotOptions getBotOptions() {
         DefaultBotOptions options = new DefaultBotOptions();
         RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(30000)  // 30 seconds
-                .setSocketTimeout(30000)   // 30 seconds
+                .setConnectTimeout(30000) // 30 seconds
+                .setSocketTimeout(30000) // 30 seconds
                 .build();
         options.setRequestConfig(requestConfig);
         return options;
@@ -85,7 +81,8 @@ public class TelegramObserverBot extends TelegramLongPollingBot {
                 int updateDate = update.getChannelPost().getDate(); // seconds since epoch (UTC)
                 long now = System.currentTimeMillis() / 1000L; // current seconds since epoch (UTC)
                 if (now - updateDate > 30) {
-                    logger.info("Skipping message older than 30 seconds. Message date: {}, Now: {}, Difference: {} seconds",
+                    logger.info(
+                            "Skipping message older than 30 seconds. Message date: {}, Now: {}, Difference: {} seconds",
                             updateDate, now, now - updateDate);
                     return;
                 }
@@ -114,7 +111,8 @@ public class TelegramObserverBot extends TelegramLongPollingBot {
                         masterTrader.executeExitTrade(exitEntities);
                         break;
                     case UNKNOWN_SIGNAL:
-                        logger.warn("Unknown signal detected: {}", messageText.substring(0, Math.min(20, messageText.length())));
+                        logger.warn("Unknown signal detected: {}",
+                                messageText.substring(0, Math.min(20, messageText.length())));
                         break;
                     default:
                         logger.warn("Unhandled message pattern: {}", messagePattern);

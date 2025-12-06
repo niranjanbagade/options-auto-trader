@@ -48,13 +48,14 @@ public class ZerodhaFollowerService {
     GlobalContextStore globalContextStore;
 
     @Async("asyncExecutor")
-    @Retryable(
-            value = {RetryableOrderException.class, SocketTimeoutException.class, IOException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 500, multiplier = 2) // Exponential (1s, 2s) between attempts
+    @Retryable(value = { RetryableOrderException.class, SocketTimeoutException.class,
+            IOException.class }, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2) // Exponential (1s,
+                                                                                                  // 2s) between
+                                                                                                  // attempts
     )
     public CompletableFuture<Boolean> placeOrderAsync(
-            String tradingSymbol, String optionType, String action, boolean isSquareOff, UnifiedClientData account, String accessToken) {
+            String tradingSymbol, String optionType, String action, boolean isSquareOff, UnifiedClientData account,
+            String accessToken) {
         final String clientName = account.getClientName();
         final String key = clientName + "_" + tradingSymbol + "_" + optionType;
 
@@ -121,7 +122,8 @@ public class ZerodhaFollowerService {
                                         action, tradingSymbol, responseCode, errorMessage);
                                 telegramService.sendMessage(account.getTelegramChannelId(),
                                         "Order placement failed for " + action + " " + tradingSymbol +
-                                                ". HTTP " + responseCode + " Response: " + errorMessage, MessageImportance.MEDIUM);
+                                                ". HTTP " + responseCode + " Response: " + errorMessage,
+                                        MessageImportance.MEDIUM);
                             }
                         } catch (Exception ex) {
                             logger.error("Failed to parse error message from response: {}", error, ex);
@@ -142,7 +144,8 @@ public class ZerodhaFollowerService {
                     }
                 }
             } finally {
-                if (conn != null) conn.disconnect();
+                if (conn != null)
+                    conn.disconnect();
             }
         } catch (SocketTimeoutException e) {
             logger.error("Socket timeout during order placement", e);
@@ -159,11 +162,12 @@ public class ZerodhaFollowerService {
     // When retries are exhausted
     @Recover
     public CompletableFuture<Boolean> recover(RetryableOrderException e,
-                                              String tradingSymbol, String action, boolean isSquareOff, UnifiedClientData account) {
+            String tradingSymbol, String action, boolean isSquareOff, UnifiedClientData account) {
         logger.error("Retries exhausted for order placement for {} {}: {}", action, tradingSymbol, e.getMessage());
         telegramService.sendMessage(account.getClientName(),
                 "Order placement failed after retries for " + action + " " + tradingSymbol +
-                        ". Error: " + e.getMessage(), MessageImportance.HIGH);
+                        ". Error: " + e.getMessage(),
+                MessageImportance.HIGH);
         return CompletableFuture.completedFuture(false);
     }
 }

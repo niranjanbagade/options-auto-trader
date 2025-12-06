@@ -5,7 +5,6 @@ import com.trading.automated.nb.AutoTrader.dtos.ConsentData;
 import com.trading.automated.nb.AutoTrader.dtos.UnifiedClientData;
 import com.trading.automated.nb.AutoTrader.enums.MessageImportance;
 import com.trading.automated.nb.AutoTrader.services.brokers.GrowwTradeService;
-import com.trading.automated.nb.AutoTrader.services.brokers.ZerodhaTradeService;
 import com.trading.automated.nb.AutoTrader.services.google.ActiveClientsService;
 import com.trading.automated.nb.AutoTrader.services.google.DailyConsentService;
 import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageService;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,9 +34,6 @@ public class UnifiedClientDataService {
     private TelegramOneToOneMessageService telegramService;
 
     @Autowired
-    private ZerodhaTradeService zerodhaTradeService;
-
-    @Autowired
     private GrowwTradeService growwTradeService;
 
     private Map<String, UnifiedClientData> unifiedClientDataCache = new HashMap<>();
@@ -46,33 +41,42 @@ public class UnifiedClientDataService {
     @PostConstruct
     public void init() {
         unifiedClientDataCache = getUnifiedClientDataCache();
-        logger.info("Unified Client Data Service initialized with {} consented clients.", unifiedClientDataCache.size());
+        logger.info("Unified Client Data Service initialized with {} consented clients.",
+                unifiedClientDataCache.size());
     }
 
     private void generateZerodhaAccessToken(ConsentData consentData, ActiveAccountsDto account) {
-//        try {
-//            String accessToken = zerodhaTradeService.generateSession(account.getApiKey(), account.getApiSecret(), consentData.getTokenOrTotpKey());
-//            account.setAccessToken(accessToken);
-//            account.setLots(consentData.getLots());
-//            telegramService.sendMessage(account.getTelegramChannelId(), "Session careted for " + account.getClientName(), MessageImportance.GOOD);
-//        } catch (IOException e) {
-//            account.setAccessToken(null);
-//            telegramService.sendMessage(account.getTelegramChannelId(), account.getClientName() + " Failed to generate access token", MessageImportance.HIGH);
-//        } catch (NoSuchAlgorithmException e) {
-//            account.setAccessToken(null);
-//            telegramService.sendMessage(account.getTelegramChannelId(), "Failed to generate access token", MessageImportance.HIGH);
-//        }
+        // try {
+        // String accessToken = zerodhaTradeService.generateSession(account.getApiKey(),
+        // account.getApiSecret(), consentData.getTokenOrTotpKey());
+        // account.setAccessToken(accessToken);
+        // account.setLots(consentData.getLots());
+        // telegramService.sendMessage(account.getTelegramChannelId(), "Session careted
+        // for " + account.getClientName(), MessageImportance.GOOD);
+        // } catch (IOException e) {
+        // account.setAccessToken(null);
+        // telegramService.sendMessage(account.getTelegramChannelId(),
+        // account.getClientName() + " Failed to generate access token",
+        // MessageImportance.HIGH);
+        // } catch (NoSuchAlgorithmException e) {
+        // account.setAccessToken(null);
+        // telegramService.sendMessage(account.getTelegramChannelId(), "Failed to
+        // generate access token", MessageImportance.HIGH);
+        // }
     }
 
     private void generateGrowAccessToken(ConsentData consentData, ActiveAccountsDto account) {
         try {
-            String accessToken = growwTradeService.generateSession(consentData.getTokenOrTotpKey(), account.getApiSecret());
+            String accessToken = growwTradeService.generateSession(consentData.getTokenOrTotpKey(),
+                    account.getApiSecret());
             account.setAccessToken(accessToken);
             account.setLots(consentData.getLots());
         } catch (Exception e) {
             logger.info("Failed to generate Groww access token for {}", account.getClientName());
             account.setAccessToken(null);
-            telegramService.sendMessage(account.getTelegramChannelId(), "Failed to generate access token. Kindly ensure hat you have filled the consent form correctly.", MessageImportance.HIGH);
+            telegramService.sendMessage(account.getTelegramChannelId(),
+                    "Failed to generate access token. Kindly ensure hat you have filled the consent form correctly.",
+                    MessageImportance.HIGH);
         }
     }
 
@@ -107,15 +111,17 @@ public class UnifiedClientDataService {
                     // FILTER 2: strict check for consentGiven == true
                     if (!consent.isConsentGiven()) {
                         logger.info("Skipping {}: Consent not given.", email);
-                        telegramService.sendMessage(account.getTelegramChannelId(), "Consent not received.", MessageImportance.MEDIUM);
+                        telegramService.sendMessage(account.getTelegramChannelId(), "Consent not received.",
+                                MessageImportance.MEDIUM);
                         continue;
                     }
 
-                    switch (account.getBroker().toLowerCase()){
+                    switch (account.getBroker().toLowerCase()) {
                         case "zerodha":
-//                            generateZerodhaAccessToken(consent, account);
-                            // As the zerodha access token is already there in the consent from, we will use that.
-//                            account.setAccessToken(consent.getTokenOrTotpKey());
+                            // generateZerodhaAccessToken(consent, account);
+                            // As the zerodha access token is already there in the consent from, we will use
+                            // that.
+                            // account.setAccessToken(consent.getTokenOrTotpKey());
                             break;
                         case "groww":
                             generateGrowAccessToken(consent, account);
@@ -124,28 +130,32 @@ public class UnifiedClientDataService {
                             continue;
                     }
 
-                    if(null == account.getAccessToken()){
+                    if (null == account.getAccessToken()) {
                         logger.info("Skipping {}: Access Token generation failed.", email);
-                        telegramService.sendMessage(account.getTelegramChannelId(), "Access Token generation failed.", MessageImportance.HIGH);
+                        telegramService.sendMessage(account.getTelegramChannelId(), "Access Token generation failed.",
+                                MessageImportance.HIGH);
                         continue;
                     }
 
-                    if(consent.getLots() <=0 ){
+                    if (consent.getLots() <= 0) {
                         logger.info("Skipping {}: Invalid lot size {}.", email, consent.getLots());
-                        telegramService.sendMessage(account.getTelegramChannelId(), "Invalid lot size specified minimum 2 lots should be traded", MessageImportance.HIGH);
+                        telegramService.sendMessage(account.getTelegramChannelId(),
+                                "Invalid lot size specified minimum 2 lots should be traded", MessageImportance.HIGH);
                         continue;
                     }
-
 
                     // 3. Merge and Add to Result
                     UnifiedClientData unifiedData = mergeData(account, consent);
                     unifiedMap.put(email, unifiedData);
                     telegramService.sendMessage(unifiedData.getTelegramChannelId(),
-                            "Consent received and access token generated. You are all set for today's trading with "+unifiedData.getLots()+" lots!",
+                            "Consent received and access token generated. You are all set for today's trading with "
+                                    + unifiedData.getLots() + " lots!",
                             MessageImportance.GOOD);
                 } else {
-                    // Log warning: User said "Yes" today but we don't have their API keys in the master sheet
-                    logger.warn("Skipping consent for {}: User consented but not found in Active Accounts Master List.", email);
+                    // Log warning: User said "Yes" today but we don't have their API keys in the
+                    // master sheet
+                    logger.warn("Skipping consent for {}: User consented but not found in Active Accounts Master List.",
+                            email);
                 }
             }
 
@@ -173,7 +183,8 @@ public class UnifiedClientDataService {
                 .clientPreference(account.getClientPreference())
                 .accessToken(account.getAccessToken())
                 // --- Dynamic Data (From Consent) ---
-                // We can safely access consent fields directly as we filtered for null/false previously
+                // We can safely access consent fields directly as we filtered for null/false
+                // previously
                 .tokenOrTotpKey(consent.getTokenOrTotpKey())
                 .consentGiven(consent.isConsentGiven())
                 .lots(consent.getLots())

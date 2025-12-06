@@ -1,11 +1,8 @@
 package com.trading.automated.nb.AutoTrader.services.brokers;
 
-import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
-import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageService;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -23,16 +20,14 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 public class ZerodhaTradeService {
-    private final Map<String, String> productMap = new ConcurrentHashMap<>();
     private static final Logger logger = LoggerFactory.getLogger(ZerodhaTradeService.class);
-    private static final Pattern CONTRACT_PATTERN =
-            Pattern.compile("([A-Z]+)\\s*(\\d+)\\s*(CE|PE)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CONTRACT_PATTERN = Pattern.compile("([A-Z]+)\\s*(\\d+)\\s*(CE|PE)",
+            Pattern.CASE_INSENSITIVE);
 
     private static final Map<Integer, String> WEEKLY_MONTH_CODE_MAP = new HashMap<>();
 
@@ -67,7 +62,8 @@ public class ZerodhaTradeService {
             String fullExpiryStr = expiryStr.trim() + " " + fullYear;
             expiryDate = LocalDate.parse(fullExpiryStr, formatter);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid expiry format: " + expiryStr + ". Expected format: 'DD MMM'", e);
+            throw new IllegalArgumentException("Invalid expiry format: " + expiryStr + ". Expected format: 'DD MMM'",
+                    e);
         }
 
         int day = expiryDate.getDayOfMonth();
@@ -110,7 +106,6 @@ public class ZerodhaTradeService {
         return tradingSymbol;
     }
 
-
     private String calculateSha256(String input) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] encodedhash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
@@ -127,7 +122,8 @@ public class ZerodhaTradeService {
         return hexString.toString();
     }
 
-    public String generateSession(String apiKey, String apiSecret, String requestToken) throws IOException, NoSuchAlgorithmException {
+    public String generateSession(String apiKey, String apiSecret, String requestToken)
+            throws IOException, NoSuchAlgorithmException {
         String urlString = "https://api.kite.trade/session/token";
 
         // 1. Calculate the Checksum (SHA-256)
@@ -182,7 +178,8 @@ public class ZerodhaTradeService {
                 throw new IOException("Unexpected JSON format: " + json);
             }
         } else {
-            throw new IOException("Failed to generate session (HTTP " + responseCode + "). Response: " + response.toString());
+            throw new IOException(
+                    "Failed to generate session (HTTP " + responseCode + "). Response: " + response.toString());
         }
     }
 }

@@ -2,7 +2,6 @@ package com.trading.automated.nb.AutoTrader.config.threads;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
@@ -19,10 +18,11 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
     @Bean(name = "telegramExecutor")
     public Executor telegramExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(20);      // set pool size as required
+        executor.setCorePoolSize(20); // set pool size as required
         executor.setMaxPoolSize(100);
         executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("TelegramSender-");
