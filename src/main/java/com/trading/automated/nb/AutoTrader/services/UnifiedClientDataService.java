@@ -72,7 +72,7 @@ public class UnifiedClientDataService {
         } catch (Exception e) {
             logger.info("Failed to generate Groww access token for {}", account.getClientName());
             account.setAccessToken(null);
-            telegramService.sendMessage(account.getTelegramChannelId(), "Failed to generate access token", MessageImportance.HIGH);
+            telegramService.sendMessage(account.getTelegramChannelId(), "Failed to generate access token. Kindly ensure hat you have filled the consent form correctly.", MessageImportance.HIGH);
         }
     }
 
@@ -130,9 +130,19 @@ public class UnifiedClientDataService {
                         continue;
                     }
 
+                    if(consent.getLots() <=0 ){
+                        logger.info("Skipping {}: Invalid lot size {}.", email, consent.getLots());
+                        telegramService.sendMessage(account.getTelegramChannelId(), "Invalid lot size specified minimum 2 lots should be traded", MessageImportance.HIGH);
+                        continue;
+                    }
+
+
                     // 3. Merge and Add to Result
                     UnifiedClientData unifiedData = mergeData(account, consent);
                     unifiedMap.put(email, unifiedData);
+                    telegramService.sendMessage(unifiedData.getTelegramChannelId(),
+                            "Consent received and access token generated. You are all set for today's trading with "+unifiedData.getLots()+" lots!",
+                            MessageImportance.GOOD);
                 } else {
                     // Log warning: User said "Yes" today but we don't have their API keys in the master sheet
                     logger.warn("Skipping consent for {}: User consented but not found in Active Accounts Master List.", email);

@@ -121,7 +121,7 @@ public class GrowwTradeService {
 
         // Handle API response
         if (response.statusCode() >= 200 && response.statusCode() < 300) {
-            logger.info("✅ Access Token Request successful. Status Code: {}", response.statusCode());
+            logger.debug("✅ Access Token Request successful. Status Code: {}", response.statusCode());
         } else {
             logger.error("❌ Access Token Request failed. Status Code: {}. Response Body: {}", response.statusCode(), response.body());
             // Throw an exception to stop the process if the API call fails

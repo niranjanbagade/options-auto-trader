@@ -21,7 +21,7 @@ public class ConsentData {
         this.tokenOrTotpKey = tokenOrTotpKey;
         this.consentGiven = consentGiven;
         this.timestamp = timestamp;
-        this.lots = lots % 2 == 0 ? lots : lots - 1;
+        setLots(lots);
     }
 
     // Getters and Setters
@@ -62,7 +62,11 @@ public class ConsentData {
     }
 
     public void setLots(int lots) {
-        this.lots = lots % 2 == 0 ? lots : lots - 1;
+        if (lots < 0) {
+            this.lots = 0;
+        } else {
+            this.lots = (lots % 2 == 0) ? lots : lots - 1;
+        }
     }
 
     @Override
