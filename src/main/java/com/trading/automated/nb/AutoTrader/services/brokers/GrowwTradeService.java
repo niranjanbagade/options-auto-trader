@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -15,7 +14,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,7 +35,8 @@ public class GrowwTradeService {
      *
      * @param inputOptionString The option description (e.g., "Nifty 26000 CE").
      * @param expiryDateString  The short expiry date (e.g., "18 Nov").
-     * @return The formatted Groww Symbol string (e.g., "NSE-NIFTY-18Nov25-26000-CE").
+     * @return The formatted Groww Symbol string (e.g.,
+     *         "NSE-NIFTY-18Nov25-26000-CE").
      */
     public String getSymbol(String inputOptionString, String expiryDateString) {
 
@@ -95,8 +94,7 @@ public class GrowwTradeService {
         // 1. Construct the JSON Request Body
         String jsonBody = String.format(
                 "{\"key_type\": \"totp\", \"totp\": \"%s\"}",
-                totpCode
-        );
+                totpCode);
 
         // 2. Build the HttpClient
         HttpClient client = HttpClient.newBuilder()
@@ -116,14 +114,14 @@ public class GrowwTradeService {
         // 4. Send the Request
         HttpResponse<String> response = client.send(
                 request,
-                HttpResponse.BodyHandlers.ofString()
-        );
+                HttpResponse.BodyHandlers.ofString());
 
         // Handle API response
         if (response.statusCode() >= 200 && response.statusCode() < 300) {
             logger.debug("✅ Access Token Request successful. Status Code: {}", response.statusCode());
         } else {
-            logger.error("❌ Access Token Request failed. Status Code: {}. Response Body: {}", response.statusCode(), response.body());
+            logger.error("❌ Access Token Request failed. Status Code: {}. Response Body: {}", response.statusCode(),
+                    response.body());
             // Throw an exception to stop the process if the API call fails
             throw new RuntimeException("API call failed with status code: " + response.statusCode());
         }
@@ -156,7 +154,6 @@ public class GrowwTradeService {
             throw new RuntimeException("Error generating session: " + e.getMessage(), e);
         }
     }
-
 
     public static class TokenResponse {
 

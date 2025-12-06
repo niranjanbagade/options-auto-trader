@@ -51,17 +51,20 @@ public class MasterTrader {
         long totalStartTime = System.nanoTime();
         for (EntryEntity entry : entryEntiries) {
 
-            String zerodhaSymbol = zerodhaTradeService.getSymbol("Nifty " + entry.getStrike() + " " + entry.getOptionType(), entry.getExpiry());
+            String zerodhaSymbol = zerodhaTradeService
+                    .getSymbol("Nifty " + entry.getStrike() + " " + entry.getOptionType(), entry.getExpiry());
             globalContextStore.setValue("zerodha_symbol_" + entry.getOptionType(), zerodhaSymbol);
-            String grwowwSymbol = growTradingService.getSymbol("Nifty " + entry.getStrike() + " " + entry.getOptionType(), entry.getExpiry());
+            String grwowwSymbol = growTradingService
+                    .getSymbol("Nifty " + entry.getStrike() + " " + entry.getOptionType(), entry.getExpiry());
             globalContextStore.setValue("groww_symbol_" + entry.getOptionType(), grwowwSymbol);
-
 
             for (Map.Entry<String, UnifiedClientData> accountEntry : accounts.entrySet()) {
                 UnifiedClientData account = accountEntry.getValue();
 
-                if ("OnlyOptionsBuying".equalsIgnoreCase(account.getClientPreference()) && entry.getAction().equalsIgnoreCase("Sell")) {
-                    logger.info("Skipping Sell order for account: {} due to OnlyOptionsBuying preference", account.getClientName());
+                if ("OnlyOptionsBuying".equalsIgnoreCase(account.getClientPreference())
+                        && entry.getAction().equalsIgnoreCase("Sell")) {
+                    logger.info("Skipping Sell order for account: {} due to OnlyOptionsBuying preference",
+                            account.getClientName());
                     continue;
                 }
 
@@ -69,29 +72,37 @@ public class MasterTrader {
                 CompletableFuture<Boolean> response = null;
                 switch (account.getBroker().toLowerCase()) {
                     case "zerodha":
-                        response = zerodhaFollowerService.placeOrderAsync(zerodhaSymbol, entry.getOptionType(), entry.getAction(), false, account, account.getAccessToken());
+                        response = zerodhaFollowerService.placeOrderAsync(zerodhaSymbol, entry.getOptionType(),
+                                entry.getAction(), false, account, account.getAccessToken());
                         break;
                     case "groww":
-                        response = growwFollowerService.placeOrderAsync(zerodhaSymbol, entry.getOptionType(), entry.getAction(), false, account, account.getAccessToken());
+                        response = growwFollowerService.placeOrderAsync(zerodhaSymbol, entry.getOptionType(),
+                                entry.getAction(), false, account, account.getAccessToken());
                         break;
                     default:
-                        logger.error("Unsupported broker: {} for account: {}", account.getBroker(), account.getClientName());
+                        logger.error("Unsupported broker: {} for account: {}", account.getBroker(),
+                                account.getClientName());
                         break;
                 }
                 long accountEndTime = System.nanoTime();
                 long accountTimeMillis = (accountEndTime - accountStartTime) / 1_000_000;
                 try {
                     if (response.get()) {
-                        logger.info("Order placed successfully for account: {} for symbol: {}", account.getClientName(), zerodhaSymbol);
-                        String message = String.format("Entry trade processed for account: %s in %d ms", account.getClientName(), accountTimeMillis);
+                        logger.info("Order placed successfully for account: {} for symbol: {}", account.getClientName(),
+                                zerodhaSymbol);
+                        String message = String.format("Entry trade processed for account: %s in %d ms",
+                                account.getClientName(), accountTimeMillis);
                         telegramService.sendMessage(account.getTelegramChannelId(), message, MessageImportance.GOOD);
                     } else {
-                        logger.error("Order placement failed for account: {} for symbol: {}", account.getClientName(), zerodhaSymbol);
-                        String message = String.format("Order placement failed for account: %s for symbol: %s", account.getClientName(), zerodhaSymbol);
+                        logger.error("Order placement failed for account: {} for symbol: {}", account.getClientName(),
+                                zerodhaSymbol);
+                        String message = String.format("Order placement failed for account: %s for symbol: %s",
+                                account.getClientName(), zerodhaSymbol);
                         telegramService.sendMessage(account.getTelegramChannelId(), message, MessageImportance.HIGH);
                     }
                 } catch (Exception e) {
-                    logger.error("Failed to send Telegram message to {}: {}", account.getTelegramChannelId(), e.getMessage());
+                    logger.error("Failed to send Telegram message to {}: {}", account.getTelegramChannelId(),
+                            e.getMessage());
                 }
             }
         }
@@ -108,12 +119,14 @@ public class MasterTrader {
                 long accountStartTime = System.nanoTime();
                 UnifiedClientData account = accountEntry.getValue();
 
-                if ("OnlyOptionsBuying".equalsIgnoreCase(account.getClientPreference()) && exit.getAction().equalsIgnoreCase("Buy")) {
-                    logger.debug("Skipping Sell order for account: {} due to OnlyOptionsBuying preference", account.getClientName());
+                if ("OnlyOptionsBuying".equalsIgnoreCase(account.getClientPreference())
+                        && exit.getAction().equalsIgnoreCase("Buy")) {
+                    logger.debug("Skipping Sell order for account: {} due to OnlyOptionsBuying preference",
+                            account.getClientName());
                     continue;
                 }
 
-                String tradeSymbol = globalContextStore.getValue("zerodha_symbol_"+ exit.getOptionType());
+                String tradeSymbol = globalContextStore.getValue("zerodha_symbol_" + exit.getOptionType());
 
                 final String action = exit.getAction();
                 final String clientName = account.getClientName();
@@ -122,55 +135,61 @@ public class MasterTrader {
                 final String value = globalContextStore.getValue(key);
                 if (value == null) {
                     String message = "No existing position found for square off: " + tradeSymbol;
-                    logger.info("{} for {}",message, clientName);
+                    logger.info("{} for {}", message, clientName);
                     telegramService.sendMessage(account.getTelegramChannelId(), message, MessageImportance.HIGH);
                     continue;
                 }
-                boolean validSquareOff =
-                        ("BUY".equals(value) && "SELL".equals(action)) ||
-                                ("SELL".equals(value) && "BUY".equals(action));
+                boolean validSquareOff = ("BUY".equals(value) && "SELL".equals(action)) ||
+                        ("SELL".equals(value) && "BUY".equals(action));
                 if (validSquareOff) {
-                    logger.info("Square off {} position for: {} for {}",value, tradeSymbol, clientName);
+                    logger.info("Square off {} position for: {} for {}", value, tradeSymbol, clientName);
                 } else {
                     String message = "No matching position found to square off for: " + tradeSymbol;
-                    logger.info("{} for {}",message, clientName);
+                    logger.info("{} for {}", message, clientName);
                     telegramService.sendMessage(account.getTelegramChannelId(), message, MessageImportance.HIGH);
                     continue;
                 }
-
 
                 CompletableFuture<Boolean> response = null;
                 switch (account.getBroker().toLowerCase()) {
                     case "zerodha":
-                        response = zerodhaFollowerService.placeOrderAsync(tradeSymbol, exit.getOptionType(), exit.getAction(), true, account, account.getAccessToken());
+                        response = zerodhaFollowerService.placeOrderAsync(tradeSymbol, exit.getOptionType(),
+                                exit.getAction(), true, account, account.getAccessToken());
                         break;
                     case "groww":
-                        response = growwFollowerService.placeOrderAsync(tradeSymbol, exit.getOptionType(), exit.getAction(), true, account, account.getAccessToken());
+                        response = growwFollowerService.placeOrderAsync(tradeSymbol, exit.getOptionType(),
+                                exit.getAction(), true, account, account.getAccessToken());
                         break;
                     default:
-                        logger.error("Unsupported broker: {} for account: {}", account.getBroker(), account.getClientName());
+                        logger.error("Unsupported broker: {} for account: {}", account.getBroker(),
+                                account.getClientName());
                         continue;
                 }
                 long accountEndTime = System.nanoTime();
                 long accountTimeMillis = (accountEndTime - accountStartTime) / 1_000_000;
                 try {
                     if (response.get()) {
-                        logger.info("Exit Order placed successfully for account: {} for symbol: {}", account.getClientName(), tradeSymbol);
-                        String message = String.format("Exit trade processed for account: %s in %d ms", account.getClientName(), accountTimeMillis);
+                        logger.info("Exit Order placed successfully for account: {} for symbol: {}",
+                                account.getClientName(), tradeSymbol);
+                        String message = String.format("Exit trade processed for account: %s in %d ms",
+                                account.getClientName(), accountTimeMillis);
                         globalContextStore.removeKey(key);
                         telegramService.sendMessage(account.getTelegramChannelId(), message, MessageImportance.GOOD);
                     } else {
-                        logger.error("Exit Order placement failed for account: {} for symbol: {}", account.getClientName(), tradeSymbol);
-                        String message = String.format("Exit Order placement failed for account: %s for symbol: %s", account.getClientName(), tradeSymbol);
+                        logger.error("Exit Order placement failed for account: {} for symbol: {}",
+                                account.getClientName(), tradeSymbol);
+                        String message = String.format("Exit Order placement failed for account: %s for symbol: %s",
+                                account.getClientName(), tradeSymbol);
                         telegramService.sendMessage(account.getTelegramChannelId(), message, MessageImportance.HIGH);
                     }
                 } catch (Exception e) {
-                    logger.error("Failed to send Telegram message to {}: {}", account.getTelegramChannelId(), e.getMessage());
+                    logger.error("Failed to send Telegram message to {}: {}", account.getTelegramChannelId(),
+                            e.getMessage());
                 }
             }
         }
         globalContextStore.removeKey("zerodha_symbol");
         globalContextStore.removeKey("groww_symbol");
-//        globalContextStore.removeKey("motilal_symbol");
+        // globalContextStore.removeKey("motilal_symbol");
     }
 }

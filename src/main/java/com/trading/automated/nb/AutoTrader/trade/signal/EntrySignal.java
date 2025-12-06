@@ -5,7 +5,8 @@ import lombok.Data;
 
 import java.util.regex.Pattern;
 
-public class EntrySignal{
+@Data
+public class EntrySignal {
 
     private String symbol;
     private double lowerBound;
@@ -13,8 +14,7 @@ public class EntrySignal{
     private double ltp;
     private String action;
 
-    private static final String ENTRY_REGEX =
-            "(BUY|SELL)\\s*[–-]?\\s*[0-9]{1,2}\\s*[A-Z]{3,4}\\s*[–-]?\\s*\"?([A-Z]+)\\s*(\\d+)\\s*(CE|PE)\"?\\s*(between|@|at)\\s*(\\d+\\.?\\d*)\\s*[–-]?\\s*(\\d+\\.?\\d*)";
+    private static final String ENTRY_REGEX = "(BUY|SELL)\\s*[–-]?\\s*[0-9]{1,2}\\s*[A-Z]{3,4}\\s*[–-]?\\s*\"?([A-Z]+)\\s*(\\d+)\\s*(CE|PE)\"?\\s*(between|@|at)\\s*(\\d+\\.?\\d*)\\s*[–-]?\\s*(\\d+\\.?\\d*)";
     private static final Pattern ENTRY_PATTERN = Pattern.compile(ENTRY_REGEX,
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 

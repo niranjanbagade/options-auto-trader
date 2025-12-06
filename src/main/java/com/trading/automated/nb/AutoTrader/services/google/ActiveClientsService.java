@@ -10,12 +10,9 @@ import com.google.api.services.sheets.v4.model.ValueRange;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.trading.automated.nb.AutoTrader.dtos.ActiveAccountsDto;
-import com.trading.automated.nb.AutoTrader.services.brokers.ZerodhaTradeService;
-import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
@@ -39,12 +36,6 @@ public class ActiveClientsService {
 
     // UPDATED: Range extended to Column J to capture all 10 fields
     private static final String RANGE = "ClientOnboardingForm!A2:J";
-
-    @Autowired
-    private TelegramOneToOneMessageService telegramService;
-
-    @Autowired
-    private ZerodhaTradeService zerodhaTradeService;
 
     private Map<String, ActiveAccountsDto> accounts;
 
@@ -94,21 +85,21 @@ public class ActiveClientsService {
                 String timestampStr = getCellValue(row, 0);
                 LocalDateTime timestamp = parseTimestamp(timestampStr);
 
-                if(!"groww".equalsIgnoreCase(getCellValue(row, 6))){
+                if (!"groww".equalsIgnoreCase(getCellValue(row, 6))) {
                     continue; // Skip non-Groww brokers
                 }
 
                 // 3. Map Fields
                 ActiveAccountsDto dto = ActiveAccountsDto.builder()
                         .timestamp(timestamp)
-                        .emailAddress(emailAddress)                           // Col B
-                        .clientName(getCellValue(row, 2))                     // Col C
-                        .clientEmail(getCellValue(row, 3))                    // Col D (Duplicate check?)
-                        .clientPhoneNumber(getCellValue(row, 4))              // Col E
-                        .telegramChannelId(getCellValue(row, 5))              // Col F
-                        .broker(getCellValue(row, 6))                         // Col G
-                        .apiSecret(getCellValue(row, 7))                      // Col H
-                        .clientPreference(getCellValue(row, 8))               // Col I
+                        .emailAddress(emailAddress) // Col B
+                        .clientName(getCellValue(row, 2)) // Col C
+                        .clientEmail(getCellValue(row, 3)) // Col D (Duplicate check?)
+                        .clientPhoneNumber(getCellValue(row, 4)) // Col E
+                        .telegramChannelId(getCellValue(row, 5)) // Col F
+                        .broker(getCellValue(row, 6)) // Col G
+                        .apiSecret(getCellValue(row, 7)) // Col H
+                        .clientPreference(getCellValue(row, 8)) // Col I
                         .build();
 
                 // 4. Put in Map (Key: Email Address)
@@ -136,19 +127,24 @@ public class ActiveClientsService {
     }
 
     private String getCellValue(List<Object> row, int index) {
-        if (index >= row.size() || row.get(index) == null) return "";
+        if (index >= row.size() || row.get(index) == null)
+            return "";
         return row.get(index).toString().trim();
     }
 
-    // Update this method in `src/main/java/com/trading/automated/nb/AutoTrader/services/google/ActiveClientsService.java`
+    // Update this method in
+    // `src/main/java/com/trading/automated/nb/AutoTrader/services/google/ActiveClientsService.java`
     private LocalDateTime parseTimestamp(String timestampStr) {
-        if (timestampStr == null || timestampStr.isEmpty()) return null;
+        if (timestampStr == null || timestampStr.isEmpty())
+            return null;
 
-        // Accept common variants: single- or double-digit month/day/hour and also ISO if present
+        // Accept common variants: single- or double-digit month/day/hour and also ISO
+        // if present
         DateTimeFormatter[] formatters = new DateTimeFormatter[] {
-                DateTimeFormatter.ofPattern("M/d/yyyy H:mm:ss"),   // e.g. 11/26/2025 9:07:58 or 1/2/2025 5:06:07
-                DateTimeFormatter.ofPattern("MM/dd/yyyy H:mm:ss"), // e.g. 11/26/2025 09:07:58 (hour single-digit tolerated)
-                DateTimeFormatter.ofPattern("M/d/yyyy HH:mm:ss"),  // alternative
+                DateTimeFormatter.ofPattern("M/d/yyyy H:mm:ss"), // e.g. 11/26/2025 9:07:58 or 1/2/2025 5:06:07
+                DateTimeFormatter.ofPattern("MM/dd/yyyy H:mm:ss"), // e.g. 11/26/2025 09:07:58 (hour single-digit
+                                                                   // tolerated)
+                DateTimeFormatter.ofPattern("M/d/yyyy HH:mm:ss"), // alternative
                 DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"),
                 DateTimeFormatter.ISO_LOCAL_DATE_TIME
         };

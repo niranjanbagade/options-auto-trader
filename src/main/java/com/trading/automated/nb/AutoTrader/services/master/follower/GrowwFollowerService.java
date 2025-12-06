@@ -47,13 +47,13 @@ public class GrowwFollowerService {
     GlobalContextStore globalContextStore;
 
     @Async("asyncExecutor")
-    @Retryable(
-            value = {RetryableOrderException.class, SocketTimeoutException.class, IOException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 500, multiplier = 2) // Exponential (1s, 2s) between attempts
+    @Retryable(retryFor = { RetryableOrderException.class,
+            IOException.class }, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2) // Exponential (500ms,
+                                                                                                  // 1s, ...)
     )
     public CompletableFuture<Boolean> placeOrderAsync(
-            String tradingSymbol, String optionType, String action, boolean isSquareOff, UnifiedClientData account, String accessToken) {
+            String tradingSymbol, String optionType, String action, boolean isSquareOff, UnifiedClientData account,
+            String accessToken) {
         final String clientName = account.getClientName();
         final String key = clientName + "_" + tradingSymbol;
         // 2. Order Placement API Call
@@ -91,7 +91,8 @@ public class GrowwFollowerService {
             params.put("tag", tag);
             params.put("segment", segment);
             params.put("order_reference_id", orderReferenceId);
-            // Add any other necessary Groww parameters here (e.g., price, disclosed quantity, etc.)
+            // Add any other necessary Groww parameters here (e.g., price, disclosed
+            // quantity, etc.)
 
             // Write parameters to the request body
             try (OutputStream os = conn.getOutputStream()) {
@@ -102,8 +103,9 @@ public class GrowwFollowerService {
             int responseCode = conn.getResponseCode();
             if (responseCode >= 200 && responseCode < 300) {
                 InputStream inputStream = conn.getInputStream();
-// Read the full response body
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+                // Read the full response body
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
                     StringBuilder response = new StringBuilder();
                     String responseLine;
                     while ((responseLine = br.readLine()) != null) {
@@ -119,13 +121,12 @@ public class GrowwFollowerService {
                     GrowwOrderResponse growwResponse = MAPPER.readValue(finalResponse, GrowwOrderResponse.class);
 
                     String clientMessage = getMessageFromResponse(
-                            growwResponse.getPayload().getOrderStatus(),
-                            growwResponse.getPayload().getRemark(),
-                            growwResponse.getPayload().getGrowwOrderId(),
+                            growwResponse.getPayload() != null ? growwResponse.getPayload().getOrderStatus() : null,
+                            growwResponse.getPayload() != null ? growwResponse.getPayload().getRemark() : null,
+                            growwResponse.getPayload() != null ? growwResponse.getPayload().getGrowwOrderId() : null,
                             tradingSymbol,
                             action,
-                            growwResponse.getPayload().getFilledQuantity()
-                    );
+                            growwResponse.getPayload() != null ? growwResponse.getPayload().getFilledQuantity() : null);
 
                     telegramService.sendMessage(account.getTelegramChannelId(),
                             clientMessage, MessageImportance.GOOD);
@@ -136,33 +137,55 @@ public class GrowwFollowerService {
                     }
                 } catch (IOException e) {
                     // Handle reading error
-                    logger.info("Error reading response body ", e);
+                    logger.error("Error reading response body ", e);
+                    throw e;
                 }
                 return CompletableFuture.completedFuture(true);
             } else {
                 String errorMessage = "";
                 // Attempt to read error stream for details
-                try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
-                    String inputLine;
-                    StringBuilder error = new StringBuilder();
-                    while ((inputLine = in.readLine()) != null) {
-                        error.append(inputLine);
-                    }
-                    // Attempt to parse JSON error message
-                    try {
-                        JSONObject errorJson = new JSONObject(error.toString());
-                        if (errorJson.has("error")) { // Check for common 'error' field too
-                            errorMessage = errorJson.getJSONObject("error").getString("message");
+                InputStream errStream = conn.getErrorStream();
+                if (errStream != null) {
+                    try (BufferedReader in = new BufferedReader(new InputStreamReader(errStream))) {
+                        String inputLine;
+                        StringBuilder error = new StringBuilder();
+                        while ((inputLine = in.readLine()) != null) {
+                            error.append(inputLine);
                         }
-                        logger.error("Order placement failed for {} {}. HTTP {} Response: {}",
-                                action, tradingSymbol, responseCode, errorMessage);
-                        telegramService.sendMessage(account.getTelegramChannelId(),
-                                "Order placement failed for " + action + " " + tradingSymbol +
-                                        ". HTTP " + responseCode + " Response: " + errorMessage, MessageImportance.MEDIUM);
-                    } catch (Exception ex) {
-                        logger.error("Failed to parse error message from response: {}", error, ex);
-                        errorMessage = "Unknown API Error";
+                        // Attempt to parse JSON error message
+                        try {
+                            JSONObject errorJson = new JSONObject(error.toString());
+                            if (errorJson.has("error")) { // Check for common 'error' field too
+                                if (errorJson.get("error") instanceof JSONObject &&
+                                        errorJson.getJSONObject("error").has("message")) {
+                                    errorMessage = errorJson.getJSONObject("error").getString("message");
+                                } else {
+                                    errorMessage = errorJson.get("error").toString();
+                                }
+                            } else if (errorJson.has("message")) {
+                                errorMessage = errorJson.getString("message");
+                            } else {
+                                errorMessage = error.toString();
+                            }
+                            logger.error("Order placement failed for {} {}. HTTP {} Response: {}",
+                                    action, tradingSymbol, responseCode, errorMessage);
+                            telegramService.sendMessage(account.getTelegramChannelId(),
+                                    "Order placement failed for " + action + " " + tradingSymbol +
+                                            ". HTTP " + responseCode + " Response: " + errorMessage,
+                                    MessageImportance.MEDIUM);
+                        } catch (Exception ex) {
+                            logger.error("Failed to parse error message from response: {}", error, ex);
+                            errorMessage = error.toString();
+                        }
                     }
+                } else {
+                    errorMessage = "No error stream available";
+                    logger.error("Order placement failed for {} {}. HTTP {}. No error stream.",
+                            action, tradingSymbol, responseCode);
+                    telegramService.sendMessage(account.getTelegramChannelId(),
+                            "Order placement failed for " + action + " " + tradingSymbol +
+                                    ". HTTP " + responseCode + " Response: " + errorMessage,
+                            MessageImportance.MEDIUM);
                 }
 
                 // --- Retry Check ---
@@ -179,22 +202,26 @@ public class GrowwFollowerService {
                     return CompletableFuture.completedFuture(false);
                 }
             }
-        } catch (SocketTimeoutException e) {
-            logger.error("Socket timeout during order placement", e);
-            throw new RetryableOrderException("Socket timeout", e);
         } catch (IOException e) {
-            logger.error("IO/network error during order placement", e);
-            throw new RetryableOrderException("Network IO error", e);
+            // Merge SocketTimeoutException handling here to satisfy the compiler
+            if (e instanceof SocketTimeoutException) {
+                logger.error("Socket timeout during order placement", e);
+                throw new RetryableOrderException("Socket timeout", e);
+            } else {
+                logger.error("IO/network error during order placement", e);
+                throw new RetryableOrderException("Network IO error", e);
+            }
         } catch (Exception e) {
             logger.error("Order placement failed - not retrying", e);
             return CompletableFuture.completedFuture(false);
         } finally {
-            if (conn != null) conn.disconnect();
+            if (conn != null)
+                conn.disconnect();
         }
     }
 
     public String getMessageFromResponse(String orderStatus, String remark, String orderId,
-                                         String tradingSymbol, String action, Integer filledQuantity) {
+            String tradingSymbol, String action, Integer filledQuantity) {
 
         StringBuilder sb = new StringBuilder();
 
@@ -232,11 +259,13 @@ public class GrowwFollowerService {
     // When retries are exhausted
     @Recover
     public CompletableFuture<Boolean> recover(RetryableOrderException e,
-                                              String tradingSymbol, String optionType, String action, boolean isSquareOff, UnifiedClientData account, String accessToken) {
+            String tradingSymbol, String optionType, String action, boolean isSquareOff, UnifiedClientData account,
+            String accessToken) {
         logger.error("Retries exhausted for order placement for {} {}: {}", action, tradingSymbol, e.getMessage());
         telegramService.sendMessage(account.getTelegramChannelId(),
                 "Order placement failed after retries for " + action + " " + tradingSymbol +
-                        ". Error: " + e.getMessage(), MessageImportance.HIGH);
+                        ". Error: " + e.getMessage(),
+                MessageImportance.HIGH);
         return CompletableFuture.completedFuture(false);
     }
 
