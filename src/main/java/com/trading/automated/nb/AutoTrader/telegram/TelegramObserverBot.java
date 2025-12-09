@@ -59,18 +59,34 @@ public class TelegramObserverBot extends TelegramLongPollingBot {
         }
     }
 
-    public TelegramObserverBot(@Value("${telegram.listener.bot}") String botToken) {
-        super(getBotOptions());
+    public TelegramObserverBot(
+            @Value("${telegram.listener.bot}") String botToken,
+            @Value("${telegram.proxy.type:NO_PROXY}") String proxyType,
+            @Value("${telegram.proxy.host:}") String proxyHost,
+            @Value("${telegram.proxy.port:0}") int proxyPort) {
+        super(getBotOptions(proxyType, proxyHost, proxyPort));
         this.botToken = botToken;
     }
 
-    private static DefaultBotOptions getBotOptions() {
+    private static DefaultBotOptions getBotOptions(String proxyType, String proxyHost, int proxyPort) {
         DefaultBotOptions options = new DefaultBotOptions();
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectTimeout(30000) // 30 seconds
                 .setSocketTimeout(30000) // 30 seconds
                 .build();
         options.setRequestConfig(requestConfig);
+
+        if (proxyType != null && !proxyType.equalsIgnoreCase("NO_PROXY")) {
+            try {
+                options.setProxyType(DefaultBotOptions.ProxyType.valueOf(proxyType.toUpperCase()));
+                options.setProxyHost(proxyHost);
+                options.setProxyPort(proxyPort);
+                logger.info("Using Proxy: Type={}, Host={}, Port={}", proxyType, proxyHost, proxyPort);
+            } catch (IllegalArgumentException e) {
+                logger.error("Invalid Proxy Type: {}. Proceeding without proxy.", proxyType);
+            }
+        }
+
         return options;
     }
 
