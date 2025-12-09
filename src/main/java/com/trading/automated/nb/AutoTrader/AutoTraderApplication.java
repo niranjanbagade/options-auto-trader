@@ -23,6 +23,11 @@ public class AutoTraderApplication implements CommandLineRunner {
     private static final Logger logger = LoggerFactory.getLogger(AutoTraderApplication.class);
 
     private final TelegramObserverBot telegramObserverBot;
+    
+    // Initial wait time: 0.5 seconds (500 milliseconds)
+    private static final long INITIAL_WAIT_TIME_MS = 500;
+    // Maximum wait time: 6 seconds (6000 milliseconds)
+    private static final long MAX_WAIT_TIME_MS = 6000;
 
     AutoTraderApplication(TelegramObserverBot bot) {
         this.telegramObserverBot = bot;
@@ -34,14 +39,50 @@ public class AutoTraderApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        logger.debug("Starting Telegram bot polling.");
-        try {
-            TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            botsApi.registerBot(telegramObserverBot);
-        } catch (TelegramApiException e) {
-            logger.error("Failed to start Telegram Bot: {}", e.getMessage());
-        }
+        
+        logger.info("Starting Telegram bot polling with automatic reconnection logic.");
+        
+        long currentWaitTime = INITIAL_WAIT_TIME_MS;
+        
+        // Loop forever, attempting to register and run the bot
+        while (true) {
+            try {
+                logger.info("Attempting to register Telegram bot...");
+                
+                // 1. Create a new API session on each attempt
+                TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+                
+                // 2. Register the bot. This call blocks if successful.
+                botsApi.registerBot(telegramObserverBot); 
+                
+                logger.info("Telegram Bot registered successfully and is now running.");
+                
+                // If registration succeeds, the bot runs in the background thread 
+                // and the main thread stays blocked here. We break the loop 
+                // because we assume the bot will run indefinitely or throw 
+                // an exception that we can catch.
+                break; 
 
-        logger.debug("Bot is running.");
+            } catch (TelegramApiException e) {
+                // 3. Catch the exception (like NoRouteToHost, ConnectException, etc.)
+                logger.error("FATAL: Telegram API connection failed. Attempting reconnection.", e);
+                
+                // 4. Wait using exponential backoff
+                logger.info("Attempting to reconnect in {} seconds...", currentWaitTime / 1000);
+                
+                try {
+                    Thread.sleep(currentWaitTime);
+                } catch (InterruptedException ie) {
+                    logger.warn("Reconnection thread interrupted.", ie);
+                    Thread.currentThread().interrupt();
+                    return; // Exit the run method gracefully if interrupted
+                }
+                
+                // 5. Increase the wait time for the next attempt (Exponential Backoff)
+                currentWaitTime = Math.min(currentWaitTime * 2, MAX_WAIT_TIME_MS);
+            }
+        }
+        
+        logger.debug("Application runner finished. Bot background thread is active.");
     }
 }
