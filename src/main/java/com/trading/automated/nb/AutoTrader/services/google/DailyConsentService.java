@@ -10,7 +10,7 @@ import com.google.api.services.sheets.v4.model.ValueRange;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.trading.automated.nb.AutoTrader.dtos.ConsentData;
-import jakarta.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,9 +29,11 @@ public class DailyConsentService {
     private static final Logger logger = LoggerFactory.getLogger(DailyConsentService.class);
     private static final String APPLICATION_NAME = "Trading Consent App";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-    private static final String CREDENTIALS_FILE_PATH = "src/main/resources/autotrader.json"; // Path to your downloaded JSON
+    private static final String CREDENTIALS_FILE_PATH = "src/main/resources/autotrader.json"; // Path to your downloaded
+                                                                                              // JSON
 
-    // Replace with your actual Spreadsheet ID (found in the URL of your Google Sheet)
+    // Replace with your actual Spreadsheet ID (found in the URL of your Google
+    // Sheet)
     // Example: https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit
     private static final String SPREADSHEET_ID = "1TD_Q2eu3JOFrpJPF8WrsDuthORS9SzwrpjhUaqQ6OvI";
 
@@ -39,7 +41,7 @@ public class DailyConsentService {
     // Adjust columns based on your specific form output order
     private static final String RANGE = "DailyConsentForm!A2:G";
 
-    @PostConstruct
+    // @PostConstruct removed for manual trigger via AdminController
     public void init() {
         try {
             Map<String, ConsentData> consents = getTodayConsents();
@@ -72,7 +74,7 @@ public class DailyConsentService {
         for (List<Object> row : values) {
             try {
                 // Parse row data
-                // Column mapping depends on Form question order. 
+                // Column mapping depends on Form question order.
                 // Typically: Timestamp | Email | Broker | Request Token | Consent
                 // Check your sheet columns to verify indices!
 
@@ -93,11 +95,11 @@ public class DailyConsentService {
                             tokenOrTotpKey,
                             isConsented,
                             timestamp,
-                            Integer.parseInt(lots)
-                    );
+                            Integer.parseInt(lots));
 
                     // Add to map (Key: Email)
-                    // Note: If a user submitted multiple times today, this overwrites with the latest.
+                    // Note: If a user submitted multiple times today, this overwrites with the
+                    // latest.
                     consentMap.put(email, data);
                 }
 
@@ -121,12 +123,14 @@ public class DailyConsentService {
     }
 
     private String getCellValue(List<Object> row, int index) {
-        if (index >= row.size()) return "";
+        if (index >= row.size())
+            return "";
         return row.get(index).toString().trim();
     }
 
     private LocalDateTime parseTimestamp(String timestampStr) {
-        // Google Forms typically uses "M/d/yyyy H:mm:ss" or "d/M/yyyy H:mm:ss" depending on locale settings of the Sheet
+        // Google Forms typically uses "M/d/yyyy H:mm:ss" or "d/M/yyyy H:mm:ss"
+        // depending on locale settings of the Sheet
         // You might need to adjust this pattern based on your Sheet's format
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("M/d/yyyy H:mm:ss");

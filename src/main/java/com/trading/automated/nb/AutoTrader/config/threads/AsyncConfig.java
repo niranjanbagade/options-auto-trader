@@ -2,13 +2,15 @@ package com.trading.automated.nb.AutoTrader.config.threads;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 
 @Configuration
 public class AsyncConfig {
-    @Bean(name = "asyncExecutor")
+    @Bean(name = { "asyncExecutor", "taskExecutor" })
+    @Primary
     public Executor asyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(20); // Number of threads to keep alive
