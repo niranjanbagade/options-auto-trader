@@ -10,7 +10,7 @@ import com.google.api.services.sheets.v4.model.ValueRange;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.trading.automated.nb.AutoTrader.dtos.ActiveAccountsDto;
-import jakarta.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -43,7 +43,6 @@ public class ActiveClientsService {
         return accounts;
     }
 
-    @PostConstruct
     public void init() {
         try {
             accounts = getActiveClients();

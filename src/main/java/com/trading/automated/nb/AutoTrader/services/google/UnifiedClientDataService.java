@@ -1,14 +1,12 @@
-package com.trading.automated.nb.AutoTrader.services;
+package com.trading.automated.nb.AutoTrader.services.google;
 
 import com.trading.automated.nb.AutoTrader.dtos.ActiveAccountsDto;
 import com.trading.automated.nb.AutoTrader.dtos.ConsentData;
 import com.trading.automated.nb.AutoTrader.dtos.UnifiedClientData;
 import com.trading.automated.nb.AutoTrader.enums.MessageImportance;
 import com.trading.automated.nb.AutoTrader.services.brokers.GrowwTradeService;
-import com.trading.automated.nb.AutoTrader.services.google.ActiveClientsService;
-import com.trading.automated.nb.AutoTrader.services.google.DailyConsentService;
 import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageService;
-import jakarta.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +36,7 @@ public class UnifiedClientDataService {
 
     private Map<String, UnifiedClientData> unifiedClientDataCache = new HashMap<>();
 
-    @PostConstruct
+    // @PostConstruct removed for manual trigger via AdminController
     public void init() {
         unifiedClientDataCache = getUnifiedClientDataCache();
         logger.info("Unified Client Data Service initialized with {} consented clients.",
