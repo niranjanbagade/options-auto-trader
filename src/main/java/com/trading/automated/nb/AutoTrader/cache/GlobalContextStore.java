@@ -20,17 +20,14 @@ public class GlobalContextStore {
     }
 
     public void removeKey(String key) {
-        logger.info("Removing context data for key: " + key);
         contextData.remove(key);
     }
 
     public void clearAll() {
-        logger.info("Clearing all context data.");
         contextData.clear();
     }
 
     public boolean containsKey(String key) {
-        logger.info("Checking presence of key: " + key);
         return contextData.containsKey(key);
     }
 

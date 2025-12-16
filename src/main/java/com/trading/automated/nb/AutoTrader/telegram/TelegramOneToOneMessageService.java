@@ -23,9 +23,7 @@ public class TelegramOneToOneMessageService {
     private String botToken;
 
     @Async("telegramExecutor")
-    @Retryable(value = { RuntimeException.class },
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 2000, multiplier = 2))
+    @Retryable(retryFor = { RuntimeException.class }, maxAttempts = 5, backoff = @Backoff(delay = 2000, multiplier = 2))
     public void sendMessage(String chatId, String message, MessageImportance importance) {
         try {
             String urlString = "https://api.telegram.org/bot" + botToken + "/sendMessage";
@@ -50,11 +48,51 @@ public class TelegramOneToOneMessageService {
             }
 
             if (conn.getResponseCode() != 200) {
-                throw new RuntimeException("Failed to send Telegram message. HTTP error code: " + conn.getResponseCode());
+                throw new RuntimeException(
+                        "Failed to send Telegram message. HTTP error code: " + conn.getResponseCode());
+            } else {
+                logger.debug("Telegram message sent successfully for chat id " + chatId);
             }
         } catch (Exception e) {
-            logger.error("Error sending Telegram message for chat id " + chatId, e);
-            throw new RuntimeException("Error sending Telegram message: " + e.getMessage(), e);
+            logger.error("Error sending Telegram message for chat id " + chatId, e.getMessage());
+            throw new RuntimeException("Error sending Telegram message: " + e.getMessage());
+        }
+    }
+
+    @Async("telegramExecutor")
+    @Retryable(retryFor = { RuntimeException.class }, maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
+    public void sendMessageOverloaded(String chatId, String message, MessageImportance importance, String botToken) {
+        try {
+            String urlString = "https://api.telegram.org/bot" + botToken + "/sendMessage";
+
+            if (!chatId.startsWith("100"))
+                chatId = "-100" + chatId;
+
+            if (!chatId.startsWith("-"))
+                chatId = "-" + chatId;
+
+            message = getSymbol(importance) + " " + message;
+            String payload = String.format("{\"chat_id\":\"%s\", \"text\":\"%s\"}", chatId, message);
+
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(payload.getBytes(StandardCharsets.UTF_8));
+            }
+
+            if (conn.getResponseCode() != 200) {
+                throw new RuntimeException(
+                        "Failed to send Telegram message. HTTP error code: " + conn.getResponseCode());
+            } else {
+                logger.debug("Telegram message sent successfully for chat id " + chatId);
+            }
+        } catch (Exception e) {
+            logger.error("Error sending Telegram message for chat id " + chatId, e.getMessage());
+            throw new RuntimeException("Error sending Telegram message: " + e.getMessage());
         }
     }
 

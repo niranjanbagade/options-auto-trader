@@ -3,3 +3,5 @@
 /src/main/resources/application-prod.properties
 /.idea/
 /src/main/resources/autotrader.json
+/src/main/java/com/trading/automated/nb/AutoTrader/scheduler/KeepAliveScheduler.java
+/logs/
