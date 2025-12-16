@@ -70,7 +70,7 @@ public class UnifiedClientDataService {
             account.setAccessToken(accessToken);
             account.setLots(consentData.getLots());
         } catch (Exception e) {
-            logger.info("Failed to generate Groww access token for {}", account.getClientName());
+            logger.info("Failed to generate Groww access token for {} and the reason is {}", account.getClientName(), e);
             account.setAccessToken(null);
             telegramService.sendMessage(account.getTelegramChannelId(),
                     "Failed to generate access token. Kindly ensure hat you have filled the consent form correctly.",

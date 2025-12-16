@@ -13,6 +13,7 @@ import com.trading.automated.nb.AutoTrader.dtos.ConsentData;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -31,15 +33,12 @@ public class DailyConsentService {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String CREDENTIALS_FILE_PATH = "src/main/resources/autotrader.json"; // Path to your downloaded
                                                                                               // JSON
-
+    @Value("${spring.profiles.active}")
+    private String activeProfiles;
     // Replace with your actual Spreadsheet ID (found in the URL of your Google
     // Sheet)
     // Example: https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit
     private static final String SPREADSHEET_ID = "1TD_Q2eu3JOFrpJPF8WrsDuthORS9SzwrpjhUaqQ6OvI";
-
-    // The range to read. Assumes data starts at A2 to E (skipping header)
-    // Adjust columns based on your specific form output order
-    private static final String RANGE = "DailyConsentForm!A2:G";
 
     // @PostConstruct removed for manual trigger via AdminController
     public void init() {
@@ -56,6 +55,7 @@ public class DailyConsentService {
 
     public Map<String, ConsentData> getTodayConsents() throws IOException, GeneralSecurityException {
         Sheets service = createSheetsService();
+        String RANGE = "dev".equals(activeProfiles) ? "DailyConsentFormTest!A2:G" : "DailyConsentForm!A2:G";
 
         ValueRange response = service.spreadsheets().values()
                 .get(SPREADSHEET_ID, RANGE)
@@ -88,8 +88,9 @@ public class DailyConsentService {
                 boolean isConsented = "Agree".equalsIgnoreCase(consentStr);
                 LocalDateTime timestamp = parseTimestamp(timestampStr);
 
-                // Filter: Only process if timestamp is from Today
-                if (timestamp != null && timestamp.toLocalDate().equals(today)) {
+                // Filter: Only process if timestamp is from Today and before 9 AM
+                if (timestamp != null && timestamp.toLocalDate().equals(today)
+                        && timestamp.toLocalTime().isBefore(LocalTime.of(9, 0))) {
                     ConsentData data = new ConsentData(
                             email,
                             tokenOrTotpKey,

@@ -8,6 +8,7 @@ import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageServi
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,12 +31,19 @@ public class TradingSessionService {
     @Autowired
     private TelegramOneToOneMessageService telegramOneToOneMessageService;
 
+    @Value("${telegram.bot.connection.type}")
+    private String connectionType;
+
     public void startSession() throws Exception {
         logger.info("Starting trading session...");
         activeClientsService.init();
         dailyConsentService.init();
         unifiedClientDataService.init();
-        telegramConnectionService.connect();
+        if (!connectionType.equalsIgnoreCase("webhook")) {
+            telegramConnectionService.connect();
+        } else {
+            logger.info("Webhook connection type is configured.");
+        }
         logger.info("Trading session started successfully.");
     }
 

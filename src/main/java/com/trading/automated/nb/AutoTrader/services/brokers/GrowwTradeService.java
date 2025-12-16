@@ -16,10 +16,18 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 @Service
 public class GrowwTradeService {
     private static final Logger logger = LoggerFactory.getLogger(GrowwTradeService.class);
+
+    @Autowired
+    @Lazy
+    private GrowwTradeService self;
 
     // Define constants for fixed components
     private static final String EXCHANGE = "NSE";
@@ -89,7 +97,8 @@ public class GrowwTradeService {
         return String.format("%06d", totpCode);
     }
 
-    public static String getAccessToken(String userApiKey, String totpCode) throws Exception {
+    @Retryable(retryFor = { Exception.class }, maxAttempts = 4, backoff = @Backoff(delay = 1000))
+    public String getAccessToken(String userApiKey, String totpCode) throws Exception {
 
         // 1. Construct the JSON Request Body
         String jsonBody = String.format(
@@ -147,7 +156,8 @@ public class GrowwTradeService {
     public String generateSession(String apiKey, String secretKey) {
         String totpCode = generateTotpCode(secretKey);
         try {
-            String accessTokenResponse = getAccessToken(apiKey, totpCode);
+            // Use 'self' to invocation goes through the proxy for @Retryable to work
+            String accessTokenResponse = self.getAccessToken(apiKey, totpCode);
             TokenResponse parsedData = parseGrowwResponse(accessTokenResponse);
             return parsedData == null ? null : parsedData.getToken();
         } catch (Exception e) {
