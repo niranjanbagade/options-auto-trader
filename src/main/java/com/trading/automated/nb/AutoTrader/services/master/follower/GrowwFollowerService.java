@@ -3,7 +3,7 @@ package com.trading.automated.nb.AutoTrader.services.master.follower;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Value;
+import org.springframework.beans.factory.annotation.Value;
 import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
 import com.trading.automated.nb.AutoTrader.dtos.UnifiedClientData;
 import com.trading.automated.nb.AutoTrader.enums.MessageImportance;
