@@ -1,5 +1,6 @@
 package com.trading.automated.nb.AutoTrader.services.master.follower;
 
+import com.google.api.client.util.Value;
 import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
 import com.trading.automated.nb.AutoTrader.dtos.UnifiedClientData;
 import com.trading.automated.nb.AutoTrader.enums.MessageImportance;
@@ -36,6 +37,9 @@ public class ZerodhaFollowerService {
             .version(HttpClient.Version.HTTP_2)
             .connectTimeout(Duration.ofSeconds(10))
             .build();
+
+    @Value("${nifty.lot.size}")
+    private static int lotSize;
 
     @Autowired
     private TelegramOneToOneMessageService telegramService;
@@ -76,7 +80,7 @@ public class ZerodhaFollowerService {
                 String orderType = "MARKET";
                 String product = "NRML";
                 String validity = "DAY";
-                int quantity = account.getLots() * 75;
+                int quantity = account.getLots() * lotSize;
                 String tag = "AutoFNOJava";
 
                 StringBuilder params = new StringBuilder();

@@ -20,9 +20,9 @@
             <!-- file per day, indexed when size exceeded; gzipped -->
             <fileNamePattern>${LOG_DIR}/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <!-- keep the last 30 days -->
-            <maxHistory>30</maxHistory>
+            <maxHistory>300</maxHistory>
             <!-- overall cap for all archived files -->
-            <totalSizeCap>1GB</totalSizeCap>
+            <totalSizeCap>5GB</totalSizeCap>
         </rollingPolicy>
 
         <encoder>

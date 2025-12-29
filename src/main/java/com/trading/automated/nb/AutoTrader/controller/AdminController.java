@@ -1,6 +1,8 @@
 package com.trading.automated.nb.AutoTrader.controller;
 
 import com.trading.automated.nb.AutoTrader.services.TradingSessionService;
+import com.trading.automated.nb.AutoTrader.services.google.WeeklyReportGenerationService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +13,9 @@ public class AdminController {
 
     @Autowired
     private TradingSessionService tradingSessionService;
+
+    @Autowired
+    private WeeklyReportGenerationService weeklyReportGenerationService;
 
     @GetMapping("/start")
     public ResponseEntity<String> startApplication() {
@@ -39,6 +44,16 @@ public class AdminController {
             return ResponseEntity.ok("Application stopped and goodbye messages sent successfully.");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to stop application: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/weekly-report")
+    public ResponseEntity<String> generateWeeklyReport() {
+        try {
+            String weeklyReport = weeklyReportGenerationService.generateWeeklyReport();
+            return ResponseEntity.ok(weeklyReport);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to generate weekly report: " + e.getMessage());
         }
     }
 }
