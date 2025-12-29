@@ -2,7 +2,6 @@ package com.trading.automated.nb.AutoTrader.telegram;
 
 import com.trading.automated.nb.AutoTrader.exceptions.ApiException;
 import com.trading.automated.nb.AutoTrader.services.SignalProcessingService; // New Service
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,9 +9,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

@@ -15,7 +15,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableRetry
 @EnableAsync
 public class AutoTraderApplication {
-    private static final Logger logger = LoggerFactory.getLogger(AutoTraderApplication.class);
 
     public static void main(String[] args) {
         SpringApplication.run(AutoTraderApplication.class, args);

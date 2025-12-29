@@ -3,6 +3,7 @@ package com.trading.automated.nb.AutoTrader.services.master.follower;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import com.trading.automated.nb.AutoTrader.cache.GlobalContextStore;
 import com.trading.automated.nb.AutoTrader.dtos.UnifiedClientData;
 import com.trading.automated.nb.AutoTrader.enums.MessageImportance;
@@ -33,6 +34,9 @@ public class GrowwFollowerService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     // Placeholder for Groww Order API URL
     private static final String GROWW_ORDER_URL = "https://api.groww.in/v1/order/create";
+
+    @Value("${nifty.lot.size}")
+    private int lotSize;
 
     @Autowired
     private TelegramOneToOneMessageService telegramService;
@@ -74,7 +78,7 @@ public class GrowwFollowerService {
             String orderType = "MARKET";
             String product = "NRML"; // Assuming a product type like NORMAL/MIS
             String validity = "DAY";
-            int quantity = account.getLots() * 75; // Standard lot size assumption
+            int quantity = account.getLots() * lotSize; // Standard lot size assumption
             String tag = "AutoFNOJava";
             String segment = "FNO";
             String orderReferenceId = "JAVA-" + System.currentTimeMillis();
@@ -132,8 +136,10 @@ public class GrowwFollowerService {
                             clientMessage, MessageImportance.GOOD);
                     if (isSquareOff) {
                         globalContextStore.removeKey(key);
+                        globalContextStore.removeKey(key + "_quantity");
                     } else {
                         globalContextStore.setValue(key, action);
+                        globalContextStore.setValue(key + "_quantity", quantity+"");
                     }
                 } catch (IOException e) {
                     // Handle reading error
