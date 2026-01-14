@@ -39,11 +39,11 @@ public class TradingSessionService {
         activeClientsService.init();
         dailyConsentService.init();
         unifiedClientDataService.init();
-        if (!connectionType.equalsIgnoreCase("webhook")) {
-            telegramConnectionService.connect();
-        } else {
-            logger.info("Webhook connection type is configured.");
-        }
+        // if (!connectionType.equalsIgnoreCase("webhook")) {
+        //     telegramConnectionService.connect();
+        // } else {
+        //     logger.info("Webhook connection type is configured.");
+        // }
         logger.info("Trading session started successfully.");
     }
 
@@ -55,6 +55,7 @@ public class TradingSessionService {
                     "Trading session has ended. See you tomorrow!",
                     com.trading.automated.nb.AutoTrader.enums.MessageImportance.LOW);
         });
+        unifiedClientDataService.getMergedClientData().clear();
         logger.info("Trading session stopped and goodbye messages sent.");
     }
 

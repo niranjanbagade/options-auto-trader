@@ -13,7 +13,7 @@ public class AsyncConfig {
     @Primary
     public Executor asyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(20); // Number of threads to keep alive
+        executor.setCorePoolSize(50); // Number of threads to keep alive
         executor.setMaxPoolSize(100); // Maximum number of threads
         executor.setQueueCapacity(500); // Number of tasks to queue before more threads are created
         executor.setThreadNamePrefix("AsyncOrder-");
@@ -24,7 +24,7 @@ public class AsyncConfig {
     @Bean(name = "telegramExecutor")
     public Executor telegramExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(20); // set pool size as required
+        executor.setCorePoolSize(50); // set pool size as required
         executor.setMaxPoolSize(100);
         executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("TelegramSender-");
