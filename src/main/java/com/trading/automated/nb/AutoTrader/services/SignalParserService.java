@@ -20,12 +20,14 @@ public class SignalParserService {
     @Autowired
     private GlobalContextStore globalContextStore;
 
-    // Method to replace all new line characters with spaces and reduce multiple spaces to a single space
+    // Method to replace all new line characters with spaces and reduce multiple
+    // spaces to a single space
     private String normalizeWhitespace(String input) {
         if (input == null) {
             return null;
         }
-        // Replace new line characters with spaces and reduce multiple spaces to a single space
+        // Replace new line characters with spaces and reduce multiple spaces to a
+        // single space
         return input.replaceAll("\\s+", " ").trim();
     }
 
@@ -54,7 +56,9 @@ public class SignalParserService {
 
     private EntryEntity[] matchSingleTradePattern(String message) {
         String pattern = "FRESH TRADE\\s+\"(BUY|SELL)\"\\s(\\d+\\s\\w+)\\s\"Nifty\\s(\\d+)\\s(CE|PE)\"\\sbetween\\s(\\d+\\.?\\d*)\\s-\\s(\\d+\\.?\\d*)\\s.*?Stop\\sloss\\sfor\\s\\d+\\s(CE|PE)\\sis\\s(\\d+\\.?\\d*)";
-        Matcher matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL).matcher(message);
+        Matcher matcher = java.util.regex.Pattern
+                .compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+                .matcher(message);
 
         if (matcher.find()) {
             try {
@@ -68,7 +72,7 @@ public class SignalParserService {
 
                 EntryEntity entry = new EntryEntity(action, expiry, strike, optionType, priceA, priceB, stopLoss);
                 globalContextStore.setValue(expiry, expiry);
-                return new EntryEntity[]{entry};
+                return new EntryEntity[] { entry };
             } catch (NumberFormatException e) {
                 logger.error("Error parsing price or stop loss values in single trade pattern: {}", message, e);
             } catch (Exception e) {
@@ -81,7 +85,9 @@ public class SignalParserService {
 
     private EntryEntity[] matchDualTradePattern(String message) {
         String pattern = "FRESH TRADE\\s+\"(BUY|SELL)\"\\s(\\d+\\s\\w+)\\s\"Nifty\\s(\\d+)\\s(CE|PE)\"\\sbetween\\s(\\d+\\.?\\d*)\\s-\\s(\\d+\\.?\\d*)\\sAND\\s\"(BUY|SELL)\"\\s(\\d+\\s\\w+)\\s\"Nifty\\s(\\d+)\\s(CE|PE)\"\\sbetween\\s(\\d+\\.?\\d*)\\s-\\s(\\d+\\.?\\d*)\\sStop\\sloss\\sfor\\s(\\d+)\\s(CE|PE)\\sis\\s(\\d+\\.?\\d*)\\sand\\s(\\d+)\\s(CE|PE)\\sis\\s(\\d+\\.?\\d*)";
-        Matcher matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL).matcher(message);
+        Matcher matcher = java.util.regex.Pattern
+                .compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+                .matcher(message);
         logger.info("Regex Pattern: {}", pattern);
         if (matcher.find()) {
             try {
@@ -95,7 +101,8 @@ public class SignalParserService {
                 double priceB1 = Double.parseDouble(matcher.group(6));
                 double stopLoss1 = Double.parseDouble(matcher.group(15));
                 globalContextStore.setValue(EXPIRY, expiry1);
-                EntryEntity entry1 = new EntryEntity(action1, expiry1, strike1, optionType1, priceA1, priceB1, stopLoss1);
+                EntryEntity entry1 = new EntryEntity(action1, expiry1, strike1, optionType1, priceA1, priceB1,
+                        stopLoss1);
 
                 // Second trade details
                 String action2 = matcher.group(7).toUpperCase().trim();
@@ -106,9 +113,10 @@ public class SignalParserService {
                 double priceB2 = Double.parseDouble(matcher.group(12));
                 double stopLoss2 = Double.parseDouble(matcher.group(18));
                 globalContextStore.setValue(EXPIRY, expiry2);
-                EntryEntity entry2 = new EntryEntity(action2, expiry2, strike2, optionType2, priceA2, priceB2, stopLoss2);
+                EntryEntity entry2 = new EntryEntity(action2, expiry2, strike2, optionType2, priceA2, priceB2,
+                        stopLoss2);
 
-                return new EntryEntity[]{entry1, entry2};
+                return new EntryEntity[] { entry1, entry2 };
             } catch (NumberFormatException e) {
                 logger.error("Error parsing price or stop loss values in dual trade pattern: {}", message, e);
             } catch (Exception e) {
@@ -128,6 +136,11 @@ public class SignalParserService {
 
         // Try matching each pattern in sequence
         ExitEntity[] result;
+
+        result = matchBook100PercentProfitWithTSL(messageText);
+        if (result != null) {
+            return result;
+        }
 
         result = matchBook100PercentProfit(messageText);
         if (result != null) {
@@ -160,7 +173,9 @@ public class SignalParserService {
 
     private ExitEntity[] matchStopLossTriggered(String messageText) {
         String pattern = "SQUARE OFF.*?Stop loss triggered\\. Modify your stop loss and square off position\\..*?(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+)(?:\\s.*?and\\s(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+))?";
-        Matcher matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL).matcher(messageText);
+        Matcher matcher = java.util.regex.Pattern
+                .compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+                .matcher(messageText);
 
         if (matcher.find()) {
             try {
@@ -181,10 +196,10 @@ public class SignalParserService {
 
                     ExitEntity exit2 = new ExitEntity(action2, strike2, exitPrice2, false, optionType2);
 
-                    return new ExitEntity[]{exit1, exit2};
+                    return new ExitEntity[] { exit1, exit2 };
                 }
 
-                return new ExitEntity[]{exit1};
+                return new ExitEntity[] { exit1 };
             } catch (Exception e) {
                 logger.error("Error parsing 'stop loss triggered' pattern: {}", messageText, e);
                 return null;
@@ -196,7 +211,9 @@ public class SignalParserService {
 
     private ExitEntity[] matchTrailingStopLossBookProfit(String messageText) {
         String pattern = "SQUARE OFF.*?Trailing stop loss triggered\\. Modify stop loss and book profit for remaining 50% quantity\\..*?(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+)(?:\\s.*?and\\s(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+))?";
-        Matcher matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL).matcher(messageText);
+        Matcher matcher = java.util.regex.Pattern
+                .compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+                .matcher(messageText);
 
         if (matcher.find()) {
             try {
@@ -217,10 +234,10 @@ public class SignalParserService {
 
                     ExitEntity exit2 = new ExitEntity(action2, strike2, exitPrice2, true, optionType2);
 
-                    return new ExitEntity[]{exit1, exit2};
+                    return new ExitEntity[] { exit1, exit2 };
                 }
 
-                return new ExitEntity[]{exit1};
+                return new ExitEntity[] { exit1 };
             } catch (Exception e) {
                 logger.error("Error parsing 'trailing stop loss book profit' pattern: {}", messageText, e);
                 return null;
@@ -232,7 +249,9 @@ public class SignalParserService {
 
     private ExitEntity[] matchBook50PercentProfit(String messageText) {
         String pattern = "SQUARE OFF.*?Modify stop loss and book 50% profit and now keep trailing stop loss at cost for remaining 50% qty\\..*?(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+)(?:\\s.*?and\\s(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+))?";
-        Matcher matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL).matcher(messageText);
+        Matcher matcher = java.util.regex.Pattern
+                .compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+                .matcher(messageText);
 
         if (matcher.find()) {
             try {
@@ -253,10 +272,10 @@ public class SignalParserService {
 
                     ExitEntity exit2 = new ExitEntity(action2, strike2, exitPrice2, true, optionType2);
 
-                    return new ExitEntity[]{exit1, exit2};
+                    return new ExitEntity[] { exit1, exit2 };
                 }
 
-                return new ExitEntity[]{exit1};
+                return new ExitEntity[] { exit1 };
             } catch (Exception e) {
                 logger.error("Error parsing 'book 50% profit' pattern: {}", messageText, e);
                 return null;
@@ -266,9 +285,11 @@ public class SignalParserService {
         return null;
     }
 
-    private ExitEntity[] matchBook100PercentProfit(String messageText) {
-        String pattern = "SQUARE OFF.*?Modify stop loss and book 100% profit\\..*?(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+)(?:\\s.*?and\\s(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+))?";
-        Matcher matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL).matcher(messageText);
+    private ExitEntity[] matchBook100PercentProfitWithTSL(String messageText) {
+        String pattern = "SQUARE OFF TSL.*?Modify stop loss and book 100% profit or trail for maximum profit\\..*?(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+)(?:\\s.*?and\\s(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+))?";
+        Matcher matcher = java.util.regex.Pattern
+                .compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+                .matcher(messageText);
 
         if (matcher.find()) {
             try {
@@ -289,10 +310,48 @@ public class SignalParserService {
 
                     ExitEntity exit2 = new ExitEntity(action2, strike2, exitPrice2, false, optionType2);
 
-                    return new ExitEntity[]{exit1, exit2};
+                    return new ExitEntity[] { exit1, exit2 };
                 }
 
-                return new ExitEntity[]{exit1};
+                return new ExitEntity[] { exit1 };
+            } catch (Exception e) {
+                logger.error("Error parsing 'book 100% profit' pattern: {}", messageText, e);
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    private ExitEntity[] matchBook100PercentProfit(String messageText) {
+        String pattern = "SQUARE OFF.*?Modify stop loss and book 100% profit\\..*?(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+)(?:\\s.*?and\\s(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+))?";
+        Matcher matcher = java.util.regex.Pattern
+                .compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+                .matcher(messageText);
+
+        if (matcher.find()) {
+            try {
+                // First leg
+                String action1 = matcher.group(1).toUpperCase().trim();
+                String strike1 = matcher.group(2).trim();
+                String optionType1 = matcher.group(3).toUpperCase().trim();
+                double exitPrice1 = Double.parseDouble(matcher.group(4));
+
+                ExitEntity exit1 = new ExitEntity(action1, strike1, exitPrice1, false, optionType1);
+
+                // Second leg (if present)
+                if (matcher.group(5) != null) {
+                    String action2 = matcher.group(5).toUpperCase().trim();
+                    String strike2 = matcher.group(6).trim();
+                    String optionType2 = matcher.group(7).toUpperCase().trim();
+                    double exitPrice2 = Double.parseDouble(matcher.group(8));
+
+                    ExitEntity exit2 = new ExitEntity(action2, strike2, exitPrice2, false, optionType2);
+
+                    return new ExitEntity[] { exit1, exit2 };
+                }
+
+                return new ExitEntity[] { exit1 };
             } catch (Exception e) {
                 logger.error("Error parsing 'book 100% profit' pattern: {}", messageText, e);
                 return null;
@@ -304,7 +363,9 @@ public class SignalParserService {
 
     private ExitEntity[] matchTrailingStopLossTriggered(String messageText) {
         String pattern = "SQUARE OFF.*?Trailing stop loss triggered\\..*?(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+)(?:\\s.*?and\\s(Sell|Buy)\\s(\\d+)\\s(CE|PE)\\s@\\s(\\d+))?";
-        Matcher matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL).matcher(messageText);
+        Matcher matcher = java.util.regex.Pattern
+                .compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+                .matcher(messageText);
 
         if (matcher.find()) {
             try {
@@ -325,10 +386,10 @@ public class SignalParserService {
 
                     ExitEntity exit2 = new ExitEntity(action2, strike2, exitPrice2, false, optionType2);
 
-                    return new ExitEntity[]{exit1, exit2};
+                    return new ExitEntity[] { exit1, exit2 };
                 }
 
-                return new ExitEntity[]{exit1};
+                return new ExitEntity[] { exit1 };
             } catch (Exception e) {
                 logger.error("Error parsing 'trailing stop loss triggered' pattern: {}", messageText, e);
                 return null;

@@ -139,7 +139,7 @@ public class GrowwFollowerService {
                         globalContextStore.removeKey(key + "_quantity");
                     } else {
                         globalContextStore.setValue(key, action);
-                        globalContextStore.setValue(key + "_quantity", quantity+"");
+                        globalContextStore.setValue(key + "_quantity", quantity + "");
                     }
                 } catch (IOException e) {
                     // Handle reading error
@@ -299,6 +299,69 @@ public class GrowwFollowerService {
         public void setPayload(OrderStatusPayload payload) {
             this.payload = payload;
         }
+    }
+
+    public double getLtp(UnifiedClientData account, String symbol) {
+        String accessToken = account.getAccessToken();
+        HttpURLConnection conn = null;
+        try {
+            // Updated URL construction for NFO segment
+            String urlString = "https://api.groww.in/v1/live-data/ltp?segment=FNO&exchange_symbols=NSE_" + symbol;
+            java.net.URI uri = java.net.URI.create(urlString);
+            URL url = uri.toURL();
+            conn = (HttpURLConnection) url.openConnection();
+
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        response.append(line);
+                    }
+
+                    JSONObject jsonResponse = new JSONObject(response.toString());
+                    if ("SUCCESS".equalsIgnoreCase(jsonResponse.optString("status"))) {
+                        JSONObject payload = jsonResponse.optJSONObject("payload");
+                        if (payload != null && payload.has("NSE_" + symbol)) {
+                            return payload.getDouble("NSE_" + symbol);
+                        }
+                    }
+                }
+            } else {
+                // Read and log the full error response
+                String errorResponse = "No content";
+                try (InputStream errorStream = conn.getErrorStream()) {
+                    if (errorStream != null) {
+                        try (BufferedReader br = new BufferedReader(
+                                new InputStreamReader(errorStream, StandardCharsets.UTF_8))) {
+                            StringBuilder sb = new StringBuilder();
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                sb.append(line);
+                            }
+                            errorResponse = sb.toString();
+                        }
+                    }
+                } catch (Exception ex) {
+                    errorResponse = "Failed to read error stream: " + ex.getMessage();
+                }
+                logger.error("Failed to fetch LTP for {}. HTTP Status: {}. Response: {}", symbol, responseCode,
+                        errorResponse);
+            }
+        } catch (Exception e) {
+            logger.error("Exception while fetching LTP for {}: {}", symbol, e.getMessage());
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+        return 0.0;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

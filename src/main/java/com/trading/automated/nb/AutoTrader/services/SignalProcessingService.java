@@ -20,8 +20,8 @@ public class SignalProcessingService {
     private final MasterTrader masterTrader;
 
     public SignalProcessingService(PatternRecognitionService patternRecognitionService,
-                                   SignalParserService parser,
-                                   MasterTrader masterTrader) {
+            SignalParserService parser,
+            MasterTrader masterTrader) {
         this.patternRecognitionService = patternRecognitionService;
         this.parser = parser;
         this.masterTrader = masterTrader;
@@ -44,13 +44,19 @@ public class SignalProcessingService {
                 break;
 
             case UNKNOWN_SIGNAL:
-                logger.warn("Skipping UNKNOWN_SIGNAL: {}", 
-                            messageText.substring(0, Math.min(50, messageText.length())));
+                logger.warn("Skipping UNKNOWN_SIGNAL: {}",
+                        messageText.substring(0, Math.min(50, messageText.length())));
                 break;
-                
+
+            case TSL_SQUARE_OFF_SIGNAL:
+                logger.info("Processing START_TRAILING_SIGNAL: {}", messageText);
+                ExitEntity[] exitEntitiesTSL = parser.getExitParams(messageText);
+                masterTrader.startTrailing(exitEntitiesTSL);
+                break;
+
             default:
-                logger.warn("Unhandled message pattern {}: Message preview: {}", 
-                            messagePattern, messageText.substring(0, Math.min(50, messageText.length())));
+                logger.warn("Unhandled message pattern {}: Message preview: {}",
+                        messagePattern, messageText.substring(0, Math.min(50, messageText.length())));
                 break;
         }
     }

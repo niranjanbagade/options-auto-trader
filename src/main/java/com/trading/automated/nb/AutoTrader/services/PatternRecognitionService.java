@@ -11,6 +11,9 @@ public class PatternRecognitionService {
         if (cleanMessage.isEmpty()) {
             return MessagePattern.UNKNOWN_SIGNAL;
         }
+        if (TSL_SQUARE_OFF_PATTERN.matcher(cleanMessage).find()) {
+            return MessagePattern.TSL_SQUARE_OFF_SIGNAL;
+        }
         if (SQUARE_OFF_PATTERN.matcher(cleanMessage).find()) {
             return MessagePattern.SQUARE_OFF_SIGNAL;
         }

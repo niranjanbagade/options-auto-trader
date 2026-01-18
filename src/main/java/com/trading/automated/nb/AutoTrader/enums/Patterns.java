@@ -63,4 +63,18 @@ public class Patterns {
 
     public static final Pattern SQUARE_OFF_PATTERN = Pattern.compile(SQUARE_OFF_REGEX,
             Pattern.CASE_INSENSITIVE | Pattern.UNIX_LINES);
+
+    public static final String TSL_SQUARE_OFF_REGEX =
+            "(?i)" +                                           // case-insensitive
+                    "\\bSQUARE\\s*OFF\\s*TSL\\s*\\b" +
+                    "[\\s\\S]{0,300}?" +                               // up to ~300 chars (safe cushion) including newlines
+                    // "\\b(?:MODIFY\\s*STOP\\s*LOSS|BOOK\\s*\\d+%\\s*PROFIT|TRAILING\\s*STOP\\s*LOSS\\s*TRIGGERED|STOP\\s*LOSS\\s*TRIGGERED|SQUARE\\s*OFF\\s*POSITION)\\b" +
+                    "[\\s\\S]{0,300}?" +
+                    // leg1
+                    "\\b(SELL|BUY)\\s*\\d{3,6}\\s*(?:CE|PE)\\s*@\\s*\\d{1,4}\\b" +
+                    // optional leg2 (AND ... )
+                    "(?:[\\s,\\-]*AND[\\s,\\-]*\\b(SELL|BUY)\\s*\\d{3,6}\\s*(?:CE|PE)\\s*@\\s*\\d{1,4}\\b)?";
+
+    public static final Pattern TSL_SQUARE_OFF_PATTERN = Pattern.compile(TSL_SQUARE_OFF_REGEX,
+            Pattern.CASE_INSENSITIVE | Pattern.UNIX_LINES);
 }
