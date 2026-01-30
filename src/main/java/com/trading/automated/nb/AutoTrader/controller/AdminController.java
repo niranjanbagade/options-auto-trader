@@ -47,6 +47,16 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/reminder")
+    public ResponseEntity<String> sendReminder() {
+        try {
+            tradingSessionService.sendReminder();
+            return ResponseEntity.ok("Reminder sent successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to send reminder: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/weekly-report")
     public ResponseEntity<String> generateWeeklyReport() {
         try {
