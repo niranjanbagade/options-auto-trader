@@ -36,4 +36,15 @@ public class DailyScheduler {
             logger.error("Error occurred during scheduled stop task: ", e);
         }
     }
+
+    // Schedule reminder
+    @Scheduled(cron = "${app.scheduling.reminder-cron}", zone = "Asia/Kolkata")
+    public void scheduleReminder() {
+        logger.info("Executing scheduled reminder task...");
+        try {
+            tradingSessionService.sendReminder();
+        } catch (Exception e) {
+            logger.error("Error occurred during scheduled reminder task: ", e);
+        }
+    }
 }

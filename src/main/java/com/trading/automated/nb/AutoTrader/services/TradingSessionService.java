@@ -26,9 +26,6 @@ public class TradingSessionService {
     private UnifiedClientDataService unifiedClientDataService;
 
     @Autowired
-    private TelegramConnectionService telegramConnectionService;
-
-    @Autowired
     private TelegramOneToOneMessageService telegramOneToOneMessageService;
 
     @Value("${telegram.bot.connection.type}")
@@ -40,9 +37,9 @@ public class TradingSessionService {
         dailyConsentService.init();
         unifiedClientDataService.init();
         // if (!connectionType.equalsIgnoreCase("webhook")) {
-        //     telegramConnectionService.connect();
+        // telegramConnectionService.connect();
         // } else {
-        //     logger.info("Webhook connection type is configured.");
+        // logger.info("Webhook connection type is configured.");
         // }
         logger.info("Trading session started successfully.");
     }
@@ -57,6 +54,18 @@ public class TradingSessionService {
         });
         unifiedClientDataService.getMergedClientData().clear();
         logger.info("Trading session stopped and goodbye messages sent.");
+    }
+
+    public void sendReminder() throws Exception {
+        logger.info("Sending reminder...");
+        activeClientsService.init();
+        activeClientsService.getAccounts().entrySet().stream().forEach(entry -> {
+            telegramOneToOneMessageService.sendMessage(
+                    entry.getValue().getTelegramChannelId(),
+                    "Kindly submit the daily consent form before 9 AM to continue trading. Ignore this message if already submitted.",
+                    com.trading.automated.nb.AutoTrader.enums.MessageImportance.LOW);
+        });
+        logger.info("Reminder sent successfully.");
     }
 
     public void refreshSession() throws Exception {
