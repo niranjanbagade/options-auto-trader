@@ -27,7 +27,7 @@ public class WeeklyReportGenerationService {
     private static final String SPREADSHEET_ID = "1TD_Q2eu3JOFrpJPF8WrsDuthORS9SzwrpjhUaqQ6OvI";
     private static final String RANGE = "ClientOnboardingForm!A2:J";
 
-    public String generateWeeklyReport() {
+    public List<String> generateWeeklyReport() {
         try {
             Sheets service = createSheetsService();
             ValueRange response = service.spreadsheets().values()
@@ -38,7 +38,7 @@ public class WeeklyReportGenerationService {
             List<List<Object>> values = response.getValues();
             if (values == null || values.isEmpty()) {
                 logger.warn("No data found in Spreadsheet range: " + RANGE);
-                return "";
+                return Collections.emptyList();
             }
 
             // Map to store unique clients by email, keeping the latest entry (similar to
@@ -61,13 +61,11 @@ public class WeeklyReportGenerationService {
                         continue;
                     }
 
-                    // Filter: Remove client "VPrakash"
                     String clientName = getCellValue(row, 2);
-                    if (clientName != null && clientName.trim().equalsIgnoreCase("VPrakash")) {
+                    if (clientName != null && clientName.trim().equalsIgnoreCase("VPrakash") || clientName.trim().equalsIgnoreCase("NNBagade")) {
                         continue;
                     }
 
-                    // Deduplication: Put in map (overwrites previous entry with same email)
                     uniqueClients.put(emailAddress, row);
 
                 } catch (Exception e) {
@@ -75,7 +73,17 @@ public class WeeklyReportGenerationService {
                 }
             }
 
-            return convertToCsv(uniqueClients.values());
+            List<String> reports = new ArrayList<>();
+            List<List<Object>> allRows = new ArrayList<>(uniqueClients.values());
+            int chunkSize = 10;
+
+            for (int i = 0; i < allRows.size(); i += chunkSize) {
+                int end = Math.min(allRows.size(), i + chunkSize);
+                List<List<Object>> chunk = allRows.subList(i, end);
+                reports.add(convertToCsv(chunk));
+            }
+
+            return reports;
 
         } catch (IOException | GeneralSecurityException e) {
             logger.error("Failed to generate weekly report", e);
@@ -85,19 +93,14 @@ public class WeeklyReportGenerationService {
 
     private String convertToCsv(Collection<List<Object>> rows) {
         StringBuilder csvBuilder = new StringBuilder();
-        // Add Header - Excluding Broker (G), API Secret (H), Client Preference (I),
-        // Lots (J)
-        // A=0, B=1, C=2, D=3, E=4, F=5
         csvBuilder.append("Timestamp,Email Address,Client Name,Client Email,Client Phone Number,Telegram Channel ID\n");
 
         for (List<Object> row : rows) {
             List<String> validRow = new ArrayList<>();
-            // Indices to include: 0, 1, 2, 3, 4, 5
             int[] indicesToInclude = { 0, 1, 2, 3, 4, 5 };
 
             for (int i : indicesToInclude) {
                 String val = getCellValue(row, i);
-                // Escape commas/quotes for CSV if necessary
                 validRow.add(escapeCsv(val));
             }
             csvBuilder.append(String.join(",", validRow));

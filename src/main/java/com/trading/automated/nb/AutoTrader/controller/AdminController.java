@@ -1,7 +1,10 @@
 package com.trading.automated.nb.AutoTrader.controller;
 
+import com.trading.automated.nb.AutoTrader.enums.MessageImportance;
 import com.trading.automated.nb.AutoTrader.services.TradingSessionService;
 import com.trading.automated.nb.AutoTrader.services.google.WeeklyReportGenerationService;
+import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageService;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +19,9 @@ public class AdminController {
 
     @Autowired
     private WeeklyReportGenerationService weeklyReportGenerationService;
+
+    @Autowired
+    private TelegramOneToOneMessageService telegramOneToOneMessageService;
 
     @GetMapping("/start")
     public ResponseEntity<String> startApplication() {
@@ -60,8 +66,14 @@ public class AdminController {
     @GetMapping("/weekly-report")
     public ResponseEntity<String> generateWeeklyReport() {
         try {
-            String weeklyReport = weeklyReportGenerationService.generateWeeklyReport();
-            return ResponseEntity.ok(weeklyReport);
+            List<String> weeklyReports = weeklyReportGenerationService.generateWeeklyReport();
+            for (String report : weeklyReports) {
+                telegramOneToOneMessageService.sendMessageOverloaded(
+                        "1003576383206",
+                        report,
+                        MessageImportance.GOOD, "8540025997:AAGOV62e_1m_WZD-nRlD8vJw0s9-K2ZMZkE");
+            }
+            return ResponseEntity.ok(weeklyReports.toString());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to generate weekly report: " + e.getMessage());
         }
