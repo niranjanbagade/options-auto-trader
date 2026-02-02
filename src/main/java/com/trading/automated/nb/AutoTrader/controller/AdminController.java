@@ -7,6 +7,7 @@ import com.trading.automated.nb.AutoTrader.telegram.TelegramOneToOneMessageServi
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +23,12 @@ public class AdminController {
 
     @Autowired
     private TelegramOneToOneMessageService telegramOneToOneMessageService;
+
+    @Value("${telegram.ops.publisher.bot.token}")
+    private String opsPublisherBotToken;
+
+    @Value("${telegram.weekly.report.chat.id}")
+    private String weeklyReportChatId;
 
     @GetMapping("/start")
     public ResponseEntity<String> startApplication() {
@@ -69,9 +76,9 @@ public class AdminController {
             List<String> weeklyReports = weeklyReportGenerationService.generateWeeklyReport();
             for (String report : weeklyReports) {
                 telegramOneToOneMessageService.sendMessageOverloaded(
-                        "1003576383206",
+                        weeklyReportChatId,
                         report,
-                        MessageImportance.GOOD, "8540025997:AAGOV62e_1m_WZD-nRlD8vJw0s9-K2ZMZkE");
+                        MessageImportance.GOOD, opsPublisherBotToken);
             }
             return ResponseEntity.ok(weeklyReports.toString());
         } catch (Exception e) {
